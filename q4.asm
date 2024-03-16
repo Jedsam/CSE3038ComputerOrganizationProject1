@@ -48,7 +48,7 @@ add $a1, $zero, $s0 # a1 = the island code
 add $a2, $zero, $s2 # a2 = x value
 
 # Method call
-jal calculateIsland 
+jal calculateIsland
 # Restoring values
 lw $s0, 0($sp) 
 lw $s1, 4($sp)
@@ -65,6 +65,7 @@ add $v0, $zero, $t0
  
 # skip the method call
 Loop2ShortExit:
+addi $s5, $s5, 1
 addi $s4, $s4, 1
 j loop2Start # return to start of loop
 Loop2Exit:
@@ -91,8 +92,9 @@ syscall
 # returns = amount of islands connected
 calculateIsland: 
 la $s0, matrix # starting address of matrix
-add $s0, $s0, $a1 
-sb $a1, 2($s0) # load the island code
+add $s0, $s0, $a0
+addi $s0, $s0, 2
+
 
 addi $s1, $zero, 1 # get the island count
 
@@ -111,17 +113,19 @@ bne $t1, $t2, topExit
 
 # Recursive call 
 # Saving values
-sub $sp, $sp, 12
+sub $sp, $sp, 16
 sw $a0, 0($sp) 
 sw $s1, 4($sp)
 sw $ra, 8($sp)
-add $t0, $zero, $a0
+sw $s0, 12($sp)
+add $a0, $zero, $t0
 jal calculateIsland 
 # Restoring values
 lw $a0, 0($sp) 
 lw $s1, 4($sp)
 lw $ra, 8($sp)
-add $sp, $sp, 12
+sw $s0, 12($sp)
+add $sp, $sp, 16
 
 # Add the total count of islands
 add $s1, $s1, $v0
@@ -146,7 +150,7 @@ sub $sp, $sp, 12
 sw $a0, 0($sp) 
 sw $s1, 4($sp)
 sw $ra, 8($sp)
-add $t0, $zero, $a0
+add $a0, $zero, $t0
 jal calculateIsland 
 # Restoring values
 lw $a0, 0($sp) 
@@ -166,7 +170,7 @@ add $t1, $t0, $s0 # Get the address of left value
 
 # Checking if the left value is equal to 1
 lb $t1, 0($t1) # get the bit value of the left
-addi $t2, $zero, 1 # Load 1 to t1
+addi $t2, $zero, -1 # Load 1 to t1
 bne $t1, $t2, leftExit 
 
 # Recursive call 
@@ -175,7 +179,7 @@ sub $sp, $sp, 12
 sw $a0, 0($sp) 
 sw $s1, 4($sp)
 sw $ra, 8($sp)
-add $t0, $zero, $a0
+add $a0, $zero, $t0
 jal calculateIsland 
 # Restoring values
 lw $a0, 0($sp) 
@@ -205,7 +209,7 @@ sub $sp, $sp, 12
 sw $a0, 0($sp) 
 sw $s1, 4($sp)
 sw $ra, 8($sp)
-add $t0, $zero, $a0
+add $a0, $zero, $t0
 jal calculateIsland 
 # Restoring values
 lw $a0, 0($sp) 

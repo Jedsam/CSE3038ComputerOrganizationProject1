@@ -30,7 +30,7 @@ slt $t0, $s4, $s2
 beq $t0, $zero, Loop2Exit
 
 # get the current element
-lw $t0, 0($s5) 
+lb $t0, 0($s5) 
 li $t1, 1
 bne $t0, $t1, Loop2ShortExit # skip the element if it is not 1
 # else start method call
@@ -79,9 +79,9 @@ add $a0, $zero, $v0
 addi $v0, $zero ,1
 syscall
 
-add $v0, $zero, $a0 # Restore return value
+addi $v0, $zero, 10 # Exit code return value
 # Exit main
-jr $ra
+syscall
 
 
 #Recursive method parameters : 

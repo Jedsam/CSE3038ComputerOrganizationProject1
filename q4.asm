@@ -54,7 +54,7 @@ lw $s0, 0($sp)
 lw $s1, 4($sp)
 lw $ra, 8($sp)
 add $t0, $zero, $v0 # Save the return value to temp register
-sw $v0, 12($sp) # restore the return value of the original main method
+lw $v0, 12($sp) # restore the return value of the original main method
 add $sp, $sp, 16
 
 addi $s0, $s0, 1 # increment the island code
@@ -92,9 +92,9 @@ syscall
 # returns = amount of islands connected
 calculateIsland: 
 la $s0, matrix # starting address of matrix
-add $s0, $s0, $a0
-addi $s0, $s0, 2
-
+add $s0, $s0, $a0 # Address of current index
+addi $s0, $s0, 2 # + 2
+sb $a1, 0($s0) # Update the value to the island code
 
 addi $s1, $zero, 1 # get the island count
 
@@ -103,8 +103,7 @@ addi $s1, $zero, 1 # get the island count
 # TOP :  
 slt $t0, $a0, $a2   
 bne $t0, $zero, topExit # Check currentAddress if its below x
-sub  $t0, $a0, $a2 # Get the index of the top value
-add $t1, $t0, $s0 # Get the address of top value
+sub $t1, $s0, $a2  # Get the address of top value
 
 # Checking if the top value is equal to 1
 lb $t1, 0($t1) # get the bit value of the top
@@ -118,7 +117,7 @@ sw $a0, 0($sp)
 sw $s1, 4($sp)
 sw $ra, 8($sp)
 sw $s0, 12($sp)
-add $a0, $zero, $t0
+sub $a0, $a0, $a2
 jal calculateIsland 
 # Restoring values
 lw $a0, 0($sp) 
@@ -133,11 +132,10 @@ topExit:
 
 # BOTTOM  
 lw $t0, maxSize # Get max size
-sub $t0, $t0, $a2 # t0 = maxSize - 5 
+sub $t0, $t0, $a2 # t0 = maxSize - x 
 slt $t0, $a0, $t0  
 beq $t0, $zero, bottomExit # Check currentAddress if its below maxSize - x 
-add $t0, $a0, $a2 # Get the index of the bottom value
-add $t1, $t0, $s0 # Get the address of bottom value
+add $t1, $a2, $s0 # Get the address of bottom value
 
 # Checking if the bottom value is equal to 1
 lb $t1, 0($t1) # get the bit value of the bottom
@@ -146,17 +144,19 @@ bne $t1, $t2, bottomExit
 
 # Recursive call 
 # Saving values
-sub $sp, $sp, 12
+sub $sp, $sp, 16
 sw $a0, 0($sp) 
 sw $s1, 4($sp)
 sw $ra, 8($sp)
-add $a0, $zero, $t0
+sw $s0, 12($sp)
+add $a0, $a0, $a2
 jal calculateIsland 
 # Restoring values
 lw $a0, 0($sp) 
 lw $s1, 4($sp)
 lw $ra, 8($sp)
-add $sp, $sp, 12
+lw $s0, 12($sp)
+add $sp, $sp, 16
 
 # Add the total count of islands
 add $s1, $s1, $v0
@@ -165,8 +165,7 @@ bottomExit:
 # LEFT
 rem $t0, $a0, $a2 # t0 = currentIndex % x
 beq $t0, $zero, leftExit # Check currentIndex % x equals 0
-addi $t0, $a0, -1 # Get the index of the left value
-add $t1, $t0, $s0 # Get the address of left value
+addi $t1, $s0, -1 # Get the address of left value
 
 # Checking if the left value is equal to 1
 lb $t1, 0($t1) # get the bit value of the left
@@ -175,17 +174,19 @@ bne $t1, $t2, leftExit
 
 # Recursive call 
 # Saving values
-sub $sp, $sp, 12
+sub $sp, $sp, 16
 sw $a0, 0($sp) 
 sw $s1, 4($sp)
 sw $ra, 8($sp)
-add $a0, $zero, $t0
+sw $s0, 12($sp)
+addi $a0, $a0, -1
 jal calculateIsland 
 # Restoring values
 lw $a0, 0($sp) 
 lw $s1, 4($sp)
 lw $ra, 8($sp)
-add $sp, $sp, 12
+lw $s0, 12($sp)
+add $sp, $sp, 16
 
 # Add the total count of islands
 add $s1, $s1, $v0
@@ -195,8 +196,8 @@ leftExit:
 rem $t0, $a0, $a2 # t0 = currentIndex % x
 addi $t1, $a2, -1 # t1 = x - 1
 beq $t0, $t1, rightExit # Check currentIndex % x equals x - 1
-addi $t0, $a0, 1 # Get the index of the right value
-add $t1, $t0, $s0 # Get the address of right value
+
+add $t1, $s0, 1 # Get the address of right value
 
 # Checking if the right value is equal to 1
 lb $t1, 0($t1) # get the bit value of the right
@@ -205,22 +206,24 @@ bne $t1, $t2, rightExit
 
 # Recursive call 
 # Saving values
-sub $sp, $sp, 12
+sub $sp, $sp, 16
 sw $a0, 0($sp) 
 sw $s1, 4($sp)
 sw $ra, 8($sp)
-add $a0, $zero, $t0
+sw $s0, 12($sp)
+addi $a0, $a0, 1
 jal calculateIsland 
 # Restoring values
 lw $a0, 0($sp) 
 lw $s1, 4($sp)
 lw $ra, 8($sp)
-add $sp, $sp, 12
+lw $s0, 12($sp)
+add $sp, $sp, 16
 
 # Add the total count of islands
 add $s1, $s1, $v0
 rightExit: 
 
 # Return total of numbers
-add $v0, $zero, $a1
+add $v0, $zero, $s1
 jr $ra

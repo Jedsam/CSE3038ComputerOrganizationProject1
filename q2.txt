@@ -1,0 +1,164 @@
+.data
+    prompt:     .asciiz "Enter the array as space-separated integers: "
+    space:     .asciiz " "
+    output:	.asciiz "The new array is: "
+    invalid_msg:.asciiz "Invalid input. Please enter only space-separated integers.\n"
+    buffer:     .space 150    # buffer to store input string
+    array:      .word 150    # array to store integers
+
+.text
+.globl main
+
+main:
+    # Prompt user to enter the array as space-separated integers
+    li $v0, 4
+    la $a0, prompt
+    syscall
+
+    # Read the string input
+    li $v0, 8           
+    la $a0, buffer      # buffer to store string
+    li $a1, 150         # maximum number of characters to read
+    syscall
+
+    # Parse the string and convert it to an integer array
+    la $t0, buffer
+    la $t1, array
+    li $t2, 0           # index for the integer array
+    li $t4, 32          # ASCII value for space
+    sw $zero, ($t1)		# initialize the first element with value 0
+parse_loop:
+    lb $t3, ($t0)	# load a character from the input buffer
+    beq  $t3, 10, end_parse	# if end of string, exit loop
+    beq $t3, $t4, skip_space # if current character is space, skip to next character
+
+    li $t5, 48	# ASCII value for '0'
+    li $t6, 57	# ASCII value for '9'
+    blt $t3, $t5, invalid_input # if character is not a digit, exit with error
+    bgt $t3, $t6, invalid_input # if character is not a digit, exit with error
+
+    # convert character to integer and store in the integer array
+    sub $t3, $t3, 48    # convert ASCII to integer
+    lw $t7, ($t1)       # store the integer in the array
+    add $t3, $t3, $t7	# add new value to old value (for example; the integer is 13, the old value is 10 and new value is 3 so the result is 13)
+    sw $t3, ($t1)		# store the result to array
+    addi $t1, $t1, 4    # move to the next element in the array
+    sw $zero, ($t1)		# initialize the new element with value 0
+    addi $t2, $t2, 1    # increment index for the integer array
+    lb $t3, 1($t0)		# load a character from the input buffer
+    beq $t3, $t4, skip_space	# if current character is space, skip the multiplication with 10
+    beq  $t3, 10, skip_space	# if current character is end of string, skip the multiplication with 10
+    subi $t2, $t2, 1	# decrease the index by 1 because there is no new character
+    sub $t1, $t1, 4		# go to the previous adress of array because there is no new character
+    lw $t3, ($t1)		
+    li $t7, 10         # load the constant value 10 into register $t1
+    mult $t3, $t7      # multiply the previous value by 10 
+    mflo $t3
+    sw $t3, ($t1)		# write it in array
+
+skip_space:
+    addi $t0, $t0, 1    # move to the next character in the input buffer
+    lb $t3, ($t0)		# load the new character to $t3
+    j parse_loop        # jump to parse_loop
+
+invalid_input:
+    li $v0, 4
+    la $a0, invalid_msg    # print error message
+    syscall
+    j end_program
+
+end_parse:
+check_coprime:
+    # Read first integer
+    la $t1, array       # load address of the integer array
+    li $t0, 0
+    beq $t2, $t0, end_program  # if the array size 0, end program
+    
+euclid_loop:	# Find GCD using Euclid's algorithm
+	sub $t5, $t2, $t0
+	beq $t5, 1, end_check_coprime	# if index is 1 smaller than size, array finished
+	lw $t3, ($t1)
+    lw $t4, 4($t1)
+    
+inner_loop:
+    beq $t4, $zero, coprime   # if b == 0, integers are coprime
+    move $t5, $t3              # t4 = a
+    div $t5, $t4               # divide a by b
+    mfhi $t3                   # t2 = remainder
+    
+    # Swap a and b
+    move $t5, $t3              # t4 = remainder
+    move $t3, $t4              # a = b
+    move $t4, $t5              # b = remainder
+    j inner_loop
+
+coprime:
+    # Check if GCD is 1
+    bne $t3, 1, not_coprime   # If GCD is not 1, integers are not coprime
+    addi $t1, $t1, 4
+    addi $t0, $t0, 1
+    j euclid_loop
+    
+not_coprime:
+calculate_lcm:
+    move $t9, $t3	# put GCD in $t9
+    # Read integers
+    lw $t3, ($t1)
+    lw $t4, 4($t1)
+    
+calculate_product:	# Calculate LCM using the formula: LCM(a, b) = (a * b) / GCD(a, b)
+    mul $t3, $t3, $t4      # t0 = a * b
+    div $t3, $t3, $t9      # Divide product by GCD
+    mflo $t3               # t3 = LCM
+    
+    sw $t3, ($t1)	# put the LCM in array
+    move $t8, $t0	# copy index
+    la $t6, 8($t1)
+    la $t7, 4($t1)
+    
+shift_array:	# delete the second integer of coprime pair (shift the next elements left by 1)
+    sub $t9, $t2, $t8
+    blt  $t9, 3, shift_finished
+
+    lw $t9, ($t6)
+    sw $t9, ($t7)
+    
+    addi $t8, $t8, 1
+    addi $t6, $t6, 4
+    addi $t7, $t7, 4
+    bne $t0, $t2, shift_array
+
+shift_finished:
+    addi $t2, $t2, -1
+    beq $t0, 0, euclid_loop
+    addi $t1, $t1, -4
+    addi $t0, $t0, -1
+    j euclid_loop
+    
+end_check_coprime:
+    li $v0, 4
+    la $a0, output
+    syscall
+    
+	la $t1, array       # load address of the integer array
+    li $t7, 0
+
+print_loop:
+    beq $t7, $t2, end_program   # if index >= size, exit loop
+    lw $t3, ($t1)       # load the current integer from the array
+    li $v0, 1
+    move $a0, $t3
+    syscall
+    
+    li $v0, 4 
+    la $a0, space
+    syscall
+    
+    addi $t1, $t1, 4    # move to the next element in the array
+    addi $t7, $t7, 1    # increment index for the integer array
+    j print_loop        # jump to print_loop
+
+end_program:
+    li $v0, 10
+    syscall
+

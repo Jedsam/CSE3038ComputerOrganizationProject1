@@ -1,100 +1,87 @@
 .data
-string: .asciiz "Computer"  # Initial string to be shuffled
-newLine: .asciiz "\n"       # New line character for formatting output
+str:    .asciiz "Computer"    # Input string to be shuffled.
+depth:  .word 3               # Depth of shuffling.
+newline: .asciiz "\n"
 
 .text
 .globl main
 
-# Entry point of the program
 main:
-    la $a0, string        # Load address of the string into $a0
-    li $a1, 3             # Set the recursion depth to 3
-    jal shuffle           # Call the shuffle subroutine
-    move $a0, $v0         # Prepare the shuffled string address for printing
-    jal print_string      # Print the shuffled string
-    li $v0, 10            # Exit syscall
-    syscall               # Terminate the program
+    la $a0, str               # Load address of the string.
+    lw $a1, depth             # Load the shuffle depth.
+    jal shuffle               # Call the shuffle procedure.
 
-# Recursive shuffle subroutine
-# Arguments: $a0 - address of the string, $a1 - depth of recursion
+    # Print the shuffled string.
+    la $a0, str               # Address of the shuffled string for printing.
+    li $v0, 4                 # Syscall to print string.
+    syscall
+
+    # Print a newline for cleanliness.
+    la $a0, newline
+    syscall
+
+    # Exit program.
+    li $v0, 10
+    syscall
+
 shuffle:
-    beq $a1, 0, end_recursion  # Base case: if depth is 0, return the string address
-    addi $sp, $sp, -8     # Adjust stack for 2 register storage
-    sw $ra, 4($sp)        # Save return address
-    sw $a0, 0($sp)        # Save original string address
+    beqz $a1, return          # Base case: If depth is 0, return.
 
-    # Calculate the length of the string
-    move $a0, $sp         # Move top of stack to $a0 for length calculation
-    jal strlen            # Call strlen subroutine to calculate string length
-    move $t1, $v0         # Move the result of strlen into $t1
+    # Save registers that will be used.
+    addiu $sp, $sp, -12       # Allocate space on the stack for 3 words.
+    sw $ra, 8($sp)            # Save return address.
+    sw $a0, 4($sp)            # Save original $a0 (string address).
+    sw $a1, 0($sp)            # Save original $a1 (depth).
 
-    # Swap the two halves of the string
-    srl $t2, $t1, 1       # Divide the length by 2 to find the midpoint
-    lw $a0, 0($sp)        # Restore original string address from stack
-    move $a2, $t2         # Move midpoint index to $a2 for swap_halves
-    jal swap_halves       # Call swap_halves subroutine to swap the two halves
+    # Halve the string length for swapping.
+    li $t0, 0                 # Counter for the loop.
+    lw $t1, 0($sp)            # Load the depth.
+    move $t2, $a0             # Copy of string address to calculate length.
+    li $t3, 0                 # Length counter.
 
-    # Recursively shuffle each half
-    addi $a1, $a1, -1     # Decrement the depth of recursion
-    sll $t3, $t2, 1       # Calculate the full length of the string
-    jal shuffle_half      # Shuffle the first half
+strlen_loop:
+    lb $t4, 0($t2)            # Load byte from string.
+    beqz $t4, strlen_done     # If byte is zero, we're at the end of the string.
+    addiu $t2, $t2, 1         # Move to the next byte.
+    addiu $t3, $t3, 1         # Increment length counter.
+    j strlen_loop
 
-    # Prepare to shuffle the second half
-    lw $a0, 0($sp)        # Reload the original string address
-    add $a0, $a0, $t2     # Adjust $a0 to point to the start of the second half
-    jal shuffle_half      # Shuffle the second half
-
-    lw $a0, 0($sp)        # Restore original string address for return
-    lw $ra, 4($sp)        # Restore return address
-    addi $sp, $sp, 8      # Adjust stack back
-    move $v0, $a0         # Move the base address of the string to $v0 for returning
-    jr $ra                # Return from shuffle
-
-end_recursion:
-    move $v0, $a0          # Return current string address
-    jr $ra                 # Return from shuffle
-
-shuffle_half:
-    # Recursive shuffle call for a half of the string
-    jal shuffle            # Perform shuffle on this half
-    jr $ra                 # Return from shuffle_half
+strlen_done:
+    sra $t5, $t3, 1           # $t5 = length / 2, calculate mid-point.
 
 swap_halves:
-    # Swap the two halves of the string based on the midpoint
-    # $a0 - address of the string, $a2 - midpoint index
-    li $t4, 0             # Initialize counter for swapping
-swap_loop:
-    beq $t4, $a2, swap_done # Check if swapping is done
-    add $t5, $a0, $t4     # Calculate address of current character in first half
-    add $t6, $a0, $a2    # Calculate starting address of the second half
-    add $t6, $t6, $t4     # Calculate address of current character in second half
-    lb $t7, 0($t5)        # Load byte from the first half
-    lb $t8, 0($t6)        # Load byte from the second half
-    sb $t7, 0($t6)        # Store first half byte into second half
-    sb $t8, 0($t5)        # Store second half byte into first half
-    addi $t4, $t4, 1      # Increment counter
-    j swap_loop           # Loop back to continue swapping
-swap_done:
-    jr $ra                # Return from swap_halves
+    beq $t0, $t5, after_swap  # If done swapping, jump to after_swap.
+    add $t6, $a0, $t0         # Address of current char in first half.
+    add $t7, $a0, $t5         # Calculate start of the second half.
+    add $t7, $t7, $t0         # Address of corresponding char in the second half.
+    lb $t8, 0($t6)            # Load byte from first half.
+    lb $t9, 0($t7)            # Load byte from second half.
+    sb $t8, 0($t7)            # Swap the bytes.
+    sb $t9, 0($t6)
+    addiu $t0, $t0, 1         # Increment loop counter.
+    j swap_halves
 
-strlen:
-    # Calculate the length of the string
-    # $a0 - address of the string
-    li $v0, 0             # Initialize length counter
-strlen_loop:
-    lb $t0, 0($a0)        # Load byte from string
-    beqz $t0, strlen_done # If byte is zero, end of string
-    addiu $v0, $v0, 1     # Increment length counter
-    addiu $a0, $a0, 1     # Move to the next byte
-    j strlen_loop         # Loop back to continue counting
-strlen_done:
-    jr $ra                # Return from strlen
+after_swap:
+    # Restore depth for recursion.
+    lw $a1, 0($sp)            # Restore original $a1 (depth).
+    addiu $a1, $a1, -1        # Decrement depth for next level of recursion.
 
-print_string:
-    # Print the string followed by a newline
-    li $v0, 4             # syscall for print_string
-    syscall
-    li $v0, 4             # syscall for printing newline
-    la $a0, newLine
-    syscall
-    jr $ra                # Return from print_string
+    # Recursive call for the first half.
+    jal shuffle
+
+    # Prepare for recursion on the second half.
+    lw $a0, 4($sp)            # Restore original $a0.
+    add $a0, $a0, $t5         # Adjust $a0 to the start of the second half.
+    lw $a1, 0($sp)            # Restore original $a1 and decrement again for the second half.
+    addiu $a1, $a1, -1        # Ensure the depth is correctly decremented for the second half as well.
+
+    jal shuffle               # Recursive call for 2nd half 
+    
+        # Restore registers and adjust the stack pointer back.
+    lw $ra, 8($sp)            # Restore the return address.
+    addiu $sp, $sp, 12        # Deallocate space on the stack.
+
+return:
+    jr $ra                    # Return to the caller.
+
+

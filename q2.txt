@@ -1,7 +1,7 @@
 .data
     prompt:     .asciiz "Enter the array as space-separated integers: "
     space:     .asciiz " "
-    output:	.asciiz "The new array is: "
+    output:	.asciiz	"The new array is: "
     invalid_msg:.asciiz "Invalid input. Please enter only space-separated integers.\n"
     buffer:     .space 150    # buffer to store input string
     array:      .word 150    # array to store integers
@@ -118,18 +118,18 @@ calculate_product:	# Calculate LCM using the formula: LCM(a, b) = (a * b) / GCD(
     
 shift_array:	# delete the second integer of coprime pair (shift the next elements left by 1)
     sub $t9, $t2, $t8
-    blt  $t9, 3, shift_finished
+    blt  $t9, 3, shift_finished	# check if it is the end of the array
 
-    lw $t9, ($t6)
-    sw $t9, ($t7)
+    lw $t9, ($t6)	# take the second next element
+    sw $t9, ($t7)	# put it in next element
     
-    addi $t8, $t8, 1
-    addi $t6, $t6, 4
+    addi $t8, $t8, 1	# increase the copy of index by 1
+    addi $t6, $t6, 4	# increase the adresses
     addi $t7, $t7, 4
     bne $t0, $t2, shift_array
 
-shift_finished:
-    addi $t2, $t2, -1
+shift_finished:	# arrangements because one element deleted from array
+    addi $t2, $t2, -1	
     beq $t0, 0, euclid_loop
     addi $t1, $t1, -4
     addi $t0, $t0, -1
@@ -140,7 +140,7 @@ end_check_coprime:
     la $a0, output
     syscall
     
-	la $t1, array       # load address of the integer array
+	la $t1, array       
     li $t7, 0
 
 print_loop:
@@ -156,7 +156,7 @@ print_loop:
     
     addi $t1, $t1, 4    # move to the next element in the array
     addi $t7, $t7, 1    # increment index for the integer array
-    j print_loop        # jump to print_loop
+    j print_loop
 
 end_program:
     li $v0, 10

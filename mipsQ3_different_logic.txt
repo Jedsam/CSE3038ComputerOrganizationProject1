@@ -1,38 +1,67 @@
 .data
-str:    .asciiz "abcd"    # Input string to be shuffled.
-depth:  .word 2           # Depth of shuffling.
-newline: .asciiz "\n"
+str:    .apace 1024    # Input string holder to be shuffled. (Max 1024/4 = 256 Length string allowed!)
+
+askStr: .asciiz "Input: "
+resultStr: .asciiz "Output: "
 
 .text
 .globl main
 
 main:
+    
+    
+    # Ask for input
+    la $a0, askStr # print input request
+    addi $v0, $zero, 4
+    syscall
+    # Get input
+    
+    # Get string
+    la $a0 str
+    addi $v0, $zero, 8
+    addi $a1, $zero, 256 # Max length of a string
+    syscall
+    # Get integer
+    
+    addi $v0, $zero, 5 # Read int
+    syscall
+    add $a1, $zero, $v0 # Push the depth value to a1
+  
+    
+    # Start the functiom 
+    
     la $a0, str           # Load address of the string.
-    lw $a1, depth         # Load the shuffle depth.
     li $a2, 0             # Initial full string length indicator.
-    addiu $sp, $sp, -16   # Allocate space on the stack for $ra and previous half-length.
+    addiu $sp, $sp, -4   # Allocate space on the stack for $ra
     sw $ra, 4($sp)        # Save $ra on the stack.
 
     jal shuffle           # Call the shuffle procedure.
 
     # Clean up stack and print the shuffled string.
     lw $ra, 4($sp)        # Restore $ra
-    addiu $sp, $sp, 16    # Deallocate space from the stack.
-
+    addiu $sp, $sp, 4  # Deallocate space from the stack.
+    
+     # Print "output"
+    la $a0, resultStr
+    li $v0, 4
+    syscall 
+    
     la $a0, str           # Address of the shuffled string for printing.
     li $v0, 4             # Syscall to print string.
     syscall
-
-    # Print a newline for cleanliness.
-    la $a0, newline
-    syscall
+    
+  
 
     # Exit program.
     li $v0, 10
     syscall
 
 shuffle:
-    sw $a1, 8($sp)        # Save depth on the stack
+    # a0 address of the string.
+    # a1 the shuffle depth.
+    # a2 Ianitial full string length indicator.
+    
+
     beqz $a1, return      # Base case: If depth is 0, return.
     addiu $a1, $a1, -1    # Decrement depth for recursion.
 
@@ -48,6 +77,7 @@ calculate_length:
 
 strlen_loop:
     lb $t2, 0($t0)        # Load byte from string.
+    move $a2, $t1
     beqz $t2, update_a2   # If byte is zero, end of string.
     addiu $t1, $t1, 1     # Increment length counter.
     addiu $t0, $t0, 1     # Move to the next character.
@@ -70,18 +100,48 @@ swap_loop:
     j swap_loop
 
 after_swap:
+
     # Recursive call for the left half of the current string.
-    lw $a1, 8($sp)        # Restore the original depth for recursion.
-    move $t0, $a0         # Preserve the base address of the current section.
-    move $t1, $a2         # Preserve the halved length for the left half recursion.
+    # Saving variables
+    sub $sp, $sp, 20
+    sw $a0, 0($sp)       
+    sw $a1, 4($sp)
+    sw $a2, 8($sp)
+    sw $s0, 12($sp)
+    sw $ra, 16($sp)
+    
+    # Preserve the base address of the current section.
+    # Preserve the halved length for the left half recursion.
     jal shuffle
-
+    # Loading variables back
+    
+    lw $a0, 0($sp)        
+    lw $a1, 4($sp)        
+    lw $a2, 8($sp)        
+    lw $s0, 12($sp)
+    lw $ra, 16($sp)
+    addi $sp, $sp, 20
+    
     # Calculate length and prepare for the right half recursion.
-    move $a0, $t0         # Restore the base address for the right half.
-    add $a0, $a0, $t1     # Adjust $a0 to the start of the right half.
-    move $a2, $t1         # Set $a2 to the full length for right half's length calculation.
-    jal calculate_length  # Recalculate length for the right half and shuffle.
-
+    # Saving variables
+    sub $sp, $sp, 20
+    sw $a0, 0($sp)       
+    sw $a1, 4($sp)        
+    sw $a2, 8($sp)        
+    sw $s0, 12($sp)
+    sw $ra, 16($sp)
+    add $a0, $a0, $a2         # Calculate the base address for the right half.
+    jal shuffle # Recalculate length for the right half and shuffle.
+    
+    # Loading variables back 
+    
+    lw $a0, 0($sp)        
+    lw $a1, 4($sp)
+    lw $a2, 8($sp)   
+    lw $s0, 16($sp)
+    lw $ra, 16($sp)     
+    addi $sp, $sp, 20
+    
 return:
     jr $ra                # Return to the caller.
 

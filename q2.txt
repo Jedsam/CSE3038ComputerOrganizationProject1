@@ -10,12 +10,12 @@
 .globl main
 
 main:
-    # Prompt user to enter the array as space-separated integers
+    # prompt user to enter the array as space-separated integers
     li $v0, 4
     la $a0, prompt
     syscall
 
-    # Read the string input
+    # read the string input
     li $v0, 8           
     la $a0, buffer      # buffer to store string
     li $a1, 150         # maximum number of characters to read
@@ -69,19 +69,19 @@ invalid_input:
 
 end_parse:
 check_coprime:
-    # Read first integer
+    # read first integer
     la $t1, array       # load address of the integer array
     li $t0, 0
     beq $t2, $t0, end_program  # if the array size 0, end program
     
-euclid_loop:	# Find GCD using Euclid's algorithm
+euclid_loop:	# find GCD using Euclid's algorithm
 	sub $t5, $t2, $t0
 	beq $t5, 1, end_check_coprime	# if index is 1 smaller than size, array finished
 	lw $t3, ($t1)
     lw $t4, 4($t1)
     
 inner_loop:
-    beq $t4, $zero, coprime   # if b == 0, integers are coprime
+    beq $t4, $zero, coprime		# if b == 0, integers are coprime
     move $t5, $t3              # t4 = a
     div $t5, $t4               # divide a by b
     mfhi $t3                   # t2 = remainder

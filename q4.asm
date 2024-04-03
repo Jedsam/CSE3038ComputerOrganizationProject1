@@ -169,7 +169,7 @@ addi $t1, $s0, -1 # Get the address of left value
 
 # Checking if the left value is equal to 1
 lb $t1, 0($t1) # get the bit value of the left
-addi $t2, $zero, -1 # Load 1 to t1
+addi $t2, $zero, 1 # Load 1 to t1
 bne $t1, $t2, leftExit 
 
 # Recursive call 

@@ -16,7 +16,7 @@ wire [31:0]
 	adder2out,	//Output of adder which adds PC+4 and 2 shifted sign-extend result-add2
 	sextad;	//Output of shift left 2 unit
 wire [5:0] 
-	inst31_26;	//31-26 bits of instruction
+	inst31_26;	//31-26 bits of instruction (opcode)
 wire [4:0] 
 	inst25_21,	//25-21 bits of instruction
 	inst20_16,	//20-16 bits of instruction
@@ -34,7 +34,13 @@ wire zout,	//Zero output of ALU
 	//Control signals
 		regdest,alusrc,memtoreg,regwrite,memread,memwrite,branch,aluop1,aluop0;
 
-//added for overflow check, the V status:
+//wires for "balrnv"
+	// Decode additional control signals
+	wire link;  // Signal to control the link address storage
+	wire [4:0] rd;  // To hold the rd field from the instruction
+
+
+//added for "balrnv"; new overflow check (the V flag), new status register:
 	wire vout; // Overflow flag from ALU
 	wire v_flag, z_flag; // Status register outputs
 	// Instantiate ALU with overflow detection
@@ -47,6 +53,10 @@ wire zout,	//Zero output of ALU
     assign dataa = registerfile[inst25_21]; // Read register 1
     assign datab = registerfile[inst20_16]; // Read register 2
     
+  	//for "balrnv"
+    assign rd = instruc[15:11];  // Extracting rd from the instruction
+	assign link = (inst31_26 == 6'b101111);  // Control signal that indicates a balrnv instruction
+
 integer i;
 
 //Data Memory Write
@@ -72,28 +82,44 @@ integer i;
 //Registers
 	assign dataa=registerfile[inst25_21];//Read register 1
 	assign datab=registerfile[inst20_16];//Read register 2
-	always @(posedge clk)
- 	registerfile[out1]= regwrite ? out3:registerfile[out1];//Write data to register
 
 //Data Memory Read (sum stores adress)
-assign dpack={datmem[sum[5:0]],datmem[sum[5:0]+1],datmem[sum[5:0]+2],datmem[sum[5:0]+3]};
+	assign dpack={datmem[sum[5:0]],datmem[sum[5:0]+1],datmem[sum[5:0]+2],datmem[sum[5:0]+3]};
 
 //Multiplexers
 	//mux with RegDst control
 	mult2_to_1_5  mult1(out1, instruc[20:16],instruc[15:11],regdest);
-
 	//mux with ALUSrc control
 	mult2_to_1_32 mult2(out2, datab,extad,alusrc);
-
 	//mux with MemToReg control
 	mult2_to_1_32 mult3(out3, sum,dpack,memtoreg);
-
 	//mux with (Branch&ALUZero) control
 	mult2_to_1_32 mult4(out4, adder1out,adder2out,pcsrc);
+	
+	 // MUX to select link register (either rd or $31), for "balrnv"
+    mult2_to_1_5 link_reg_select(link_reg, rd, 5'd31, link);
 
-// load pc
-	always @(negedge clk)
-	pc=out4;
+//Write data to register file, for "balrnv"
+	always @(posedge clk) begin
+	    if (regwrite) begin
+  	      if (link && !v_flag) begin
+  	          // Special case for balrnv: Write link address (PC + 4) to link register
+   	         registerfile[link_reg] <= adder1out;
+		  end else begin
+   	         // Normal register write operation
+    	        registerfile[out1] <= out3;
+    	  end
+  	   end
+	end
+
+//update branch logic, pc, for "balrnv"
+    // Branching logic
+    	always @(negedge clk) begin
+        	if ((branch && z_flag) || (link && !v_flag))
+            	pc <= registerfile[inst25_21];  // Branch to address in $rs
+        	else
+           	 pc <= out4;  // Normal PC update (e.g., PC + 4 or branch target)
+    	end
 
 // alu, adder and control logic connections
 	//ALU unit
@@ -119,6 +145,7 @@ assign dpack={datmem[sum[5:0]],datmem[sum[5:0]+1],datmem[sum[5:0]+2],datmem[sum[
 	shift shift2(sextad,extad);
 
 	// AND gate for branch condition
+	//for "balrnv"
     assign pcsrc = (branch && z_flag) || (inst31_26 == 6'b101111 && !v_flag); // 6'b101111 is the example opcode for balrnv
 
 

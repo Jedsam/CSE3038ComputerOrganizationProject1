@@ -112,15 +112,6 @@ integer i;
   	   end
 	end
 
-//update branch logic, pc, for "balrnv"
-    // Branching logic
-    	always @(negedge clk) begin
-        	if ((branch && z_flag) || (link && !v_flag))
-            	pc <= registerfile[inst25_21];  // Branch to address in $rs
-        	else
-           	 pc <= out4;  // Normal PC update (e.g., PC + 4 or branch target)
-    	end
-
 // alu, adder and control logic connections
 	//ALU unit
 	alu32 alu1(sum,dataa,out2,zout,gout);
@@ -144,9 +135,15 @@ integer i;
 	//Shift-left 2 unit
 	shift shift2(sextad,extad);
 
-	// AND gate for branch condition
-	//for "balrnv"
-    assign pcsrc = (branch && z_flag) || (inst31_26 == 6'b101111 && !v_flag); // 6'b101111 is the example opcode for balrnv
+    
+//PC update logic to handle normal operation and branch, for "balrnv"
+    // Branching logic
+    	always @(negedge clk) begin
+        	if ((branch && z_flag) || (link && !v_flag))
+            	pc <= registerfile[inst25_21];  // Branch to address in $rs
+        	else
+           	 pc <= out4;  // Normal PC update (e.g., PC + 4 or branch target)
+    	end
 
 
 //initialize datamemory,instruction memory and registers

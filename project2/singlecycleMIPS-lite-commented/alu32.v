@@ -4,6 +4,8 @@ input [31:0] a,b;
 input [2:0] gin;//ALU control line
 reg [31:0] sum;
 reg [31:0] less;
+
+//for "balrnv"
 output zout, vout;
 reg zout, vout;
 

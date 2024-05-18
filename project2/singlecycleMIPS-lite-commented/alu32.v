@@ -1,41 +1,43 @@
-module alu32(sum,a,b,zout, vout,gin);//ALU operation according to the ALU control line values
-output [31:0] sum;
+module alu32(result,a,b,zout,vout,nout,gin);//ALU operation according to the ALU control line values
+output [31:0] result;
 input [31:0] a,b; 
 input [2:0] gin;//ALU control line
-reg [31:0] sum;
+reg [31:0] result;
 reg [31:0] less;
 
-//for "balrnv"
-output zout, vout;
-reg zout, vout;
+
+output zout, vout, nout;	// vout and nout added here n=negative, v=overflow
+reg zout, vout, nout;
 
 always @(a or b or gin) begin
 	case(gin)
 		3'b010: begin //ALU control line=010, ADD
-			sum=a+b; 		
+			result=a+b; 		
 			 // Detect overflow for addition
-            vout=((a[31] && b[31] && !sum[31]) || (!a[31] && !b[31] && sum[31]));
+            vout=((a[31] && b[31] && !result[31]) || (!a[31] && !b[31] && result[31]));
         end
 	
 	
 		3'b110: begin  //ALU control line=110, SUB
-			sum=a+1+(~b);	
+			result=a+1+(~b);	
 			// Detect overflow for subtraction
-            vout=((a[31] && !b[31] && !sum[31]) || (!a[31] && b[31] && sum[31]));
+            vout=((a[31] && !b[31] && !result[31]) || (!a[31] && b[31] && result[31]));
         end
 		
 		3'b111: begin  	//ALU control line=111, set on less than
 		less=a+1+(~b);
-			if (less[31]) sum=1;	
-			else sum=0;
+			if (less[31]) result=1;	
+			else result=0;
 	    end
 		  
-		3'b000: sum=a & b;	//ALU control line=000, AND
+		3'b000: result=a & b;	//ALU control line=000, AND
 		
-		3'b001: sum=a|b;		//ALU control line=001, OR
+		3'b001: result=a|b;		//ALU control line=001, OR
 		
-		default: sum=31'bx;	
+		default: result=31'bx;	
 	endcase
-	zout=~(|sum); //zero flag
+	zout=~(|result); //zero flag
+	if (result[31]) nout=1;
+	else nout=0;
 end
 endmodule

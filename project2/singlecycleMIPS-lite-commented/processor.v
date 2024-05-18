@@ -5,23 +5,23 @@ reg clk; //clock
 reg [7:0] datmem[0:31],mem[0:31]; //32-size data and instruction memory (8 bit(1 byte) for each location)
 
 wire [31:0] 
-	dataa,	//Read data 1 output of Register File
-	datab,	//Read data 2 output of Register File
+	readdata1,	//Read data 1 output of Register File
+	readdata2,	//Read data 2 output of Register File
 	out2,		//Output of mux with ALUSrc control-mult2
 	out3,		//Output of mux with MemToReg control-mult3
 	out4,		//Output of mux with (Branch&ALUZero) control-mult4
-	sum,		//ALU result
-	extad,	//Output of sign-extend unit
+	alu_result,	//ALU result
+	extad,		//Output of sign-extend unit
 	adder1out,	//Output of adder which adds PC and 4-add1
 	adder2out,	//Output of adder which adds PC+4 and 2 shifted sign-extend result-add2
-	sextad;	//Output of shift left 2 unit
+	sextad;		//Output of shift left 2 unit
 wire [5:0] 
 	inst31_26;	//31-26 bits of instruction (opcode)
 wire [4:0] 
 	inst25_21,	//25-21 bits of instruction
 	inst20_16,	//20-16 bits of instruction
 	inst15_11,	//15-11 bits of instruction
-	out1;		//Write data input of Register File
+	out1;		//Write register select input of Register File, output of mux with RegDst control signal
 wire [15:0] 
 	inst15_0;	//15-0 bits of instruction
 wire [31:0] 
@@ -41,32 +41,32 @@ wire zout,	//Zero output of ALU
 
 
 //added for "balrnv"; new overflow check (the V flag), new status register:
-	wire vout; // Overflow flag from ALU
-	wire v_flag, z_flag; // Status register outputs
+	wire vout, nout; // Overflow flag from ALU
+	wire v_flag, z_flag, n_flag; // Status register outputs
 	// Instantiate ALU with overflow detection
-	alu32 alu1(sum, dataa, out2, zout, gout, vout);
+	alu32 alu1(alu_result, readdata1, out2, zout, vout, nout, gout);
 	// Status register to capture ALU flags
-	status_register sr1(clk, vout, zout, v_flag, z_flag);
+	status_register sr1(clk, vout, zout, v_flag, z_flag, n_flag);
 
 // Register file connections
-    reg [31:0] registerfile[0:31];
-    assign dataa = registerfile[inst25_21]; // Read register 1
-    assign datab = registerfile[inst20_16]; // Read register 2
+    	reg [31:0] registerfile[0:31];
+    	assign readdata1 = registerfile[inst25_21]; // Read register 1
+    	assign readdata2 = registerfile[inst20_16]; // Read register 2
     
   	//for "balrnv"
-    assign rd = instruc[15:11];  // Extracting rd from the instruction
-	assign link = (inst31_26 == 6'b101111);  // Control signal that indicates a balrnv instruction
+    	assign rd = instruc[15:11];  // Extracting rd from the instruction
+	assign link = (inst31_26 == 6'b101111);  // link = balrnv && jmnor && bltzal && jspal && baln gibi bir ?ey olacak, ?u an sadaece balrnv.
 
 integer i;
 
 //Data Memory Write
 	always @(posedge clk)
 	if (memwrite) 	begin 
-	//sum stores address,datab stores the value to be written
-	datmem[sum[4:0]+3]=datab[7:0];
-	datmem[sum[4:0]+2]=datab[15:8];
-	datmem[sum[4:0]+1]=datab[23:16];
-	datmem[sum[4:0]]=datab[31:24];
+	//sum stores address,readdata2 stores the value to be written
+	datmem[alu_result[4:0]+3]=readdata2[7:0];
+	datmem[alu_result[4:0]+2]=readdata2[15:8];
+	datmem[alu_result[4:0]+1]=readdata2[23:16];
+	datmem[alu_result[4:0]]=readdata2[31:24];
 	end
 
 //Instruction memory read
@@ -80,24 +80,26 @@ integer i;
 
 
 //Registers
-	assign dataa=registerfile[inst25_21];//Read register 1
-	assign datab=registerfile[inst20_16];//Read register 2
+	assign readdata1=registerfile[inst25_21];//Read register 1
+	assign readdata2=registerfile[inst20_16];//Read register 2
 
 //Data Memory Read (sum stores adress)
-	assign dpack={datmem[sum[5:0]],datmem[sum[5:0]+1],datmem[sum[5:0]+2],datmem[sum[5:0]+3]};
+	assign dpack={datmem[alu_result[5:0]],datmem[alu_result[5:0]+1],datmem[alu_result[5:0]+2],datmem[alu_result[5:0]+3]};
 
 //Multiplexers
 	//mux with RegDst control
 	mult2_to_1_5  mult1(out1, instruc[20:16],instruc[15:11],regdest);
 	//mux with ALUSrc control
-	mult2_to_1_32 mult2(out2, datab,extad,alusrc);
+	mult2_to_1_32 mult2(out2, readdata2,extad,alusrc);
 	//mux with MemToReg control
-	mult2_to_1_32 mult3(out3, sum,dpack,memtoreg);
+	mult2_to_1_32 mult3(out3, alu_result,dpack,memtoreg);
 	//mux with (Branch&ALUZero) control
 	mult2_to_1_32 mult4(out4, adder1out,adder2out,pcsrc);
 	
-	 // MUX to select link register (either rd or $31), for "balrnv"
-    mult2_to_1_5 link_reg_select(link_reg, rd, 5'd31, link);
+	// MUX to select link register (either rd or $31), for "balrnv"
+    	mult2_to_1_5 link_reg_select(link_reg, rd, 5'd31, link);	// bu ?u an sadece balrnv için link yap?yor ama 5 instructionda link var, hepsi için düzenlenmesi gerekiyor.
+									// link = balrnv && jmnor && bltzal && jspal && baln gibi bir ?ey olacak
+									// zaten link 1 oldu?unda link_reg = rd oluyor link 0 olursa da lik_reg kulan?lm?yor, di?er durumda 31 yapmam?z?n bence manas? yok.
 
 //Write data to register file, for "balrnv"
 	always @(posedge clk) begin
@@ -114,7 +116,7 @@ integer i;
 
 // alu, adder and control logic connections
 	//ALU unit
-	alu32 alu1(sum,dataa,out2,zout,gout);
+	//alu32 alu1(alu_result,readdata1,out2,zout,gout); original alu
 
 	//adder which adds PC and 4
 	adder add1(pc,32'h4,adder1out);
@@ -134,6 +136,8 @@ integer i;
 
 	//Shift-left 2 unit
 	shift shift2(sextad,extad);
+
+	assign pcsrc=branch && zout; 
 
     
 //PC update logic to handle normal operation and branch, for "balrnv"
@@ -170,7 +174,7 @@ initial begin
 end
 
 initial begin
-	  $monitor($time,"PC %h",pc,"  SUM %h",sum,"   INST %h",instruc[31:0],
+	  $monitor($time,"PC %h",pc,"  SUM %h",alu_result,"   INST %h",instruc[31:0],
 	"   REGISTER %h %h %h %h ",registerfile[4],registerfile[5], registerfile[6],registerfile[1] );
 end
 

@@ -1,4 +1,4 @@
-module alu32(sum,a,b,zout,gin);//ALU operation according to the ALU control line values
+module alu32(sum,a,b,zout, vout,gin);//ALU operation according to the ALU control line values
 output [31:0] sum;
 input [31:0] a,b; 
 input [2:0] gin;//ALU control line
@@ -14,14 +14,14 @@ always @(a or b or gin) begin
 		3'b010: begin //ALU control line=010, ADD
 			sum=a+b; 		
 			 // Detect overflow for addition
-            vout = ((a[31] && b[31] && !sum[31]) || (!a[31] && !b[31] && sum[31]));
+            vout=((a[31] && b[31] && !sum[31]) || (!a[31] && !b[31] && sum[31]));
         end
 	
 	
-		3'b110: 	  //ALU control line=110, SUB
+		3'b110: begin  //ALU control line=110, SUB
 			sum=a+1+(~b);	
 			// Detect overflow for subtraction
-            vout = ((a[31] && !b[31] && !sum[31]) || (!a[31] && b[31] && sum[31]));
+            vout=((a[31] && !b[31] && !sum[31]) || (!a[31] && b[31] && sum[31]));
         end
 		
 		3'b111: begin  	//ALU control line=111, set on less than

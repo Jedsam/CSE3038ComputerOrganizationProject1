@@ -41,6 +41,11 @@ wire zout,	//Zero output of ALU
 	wire link;  // Signal to control the link address storage
 	wire [4:0] rd;  // To hold the rd field from the instruction
 
+//wire for zero-extended immediate, for "ori"
+wire [31:0] zextad;
+	// Instantiate the zero extension unit
+	zeroext zext(instruc[15:0], zextad);
+
 
 //added for "balrnv"; new overflow check (the V flag), new status register:
 	wire vout, nout; // Overflow flag from ALU
@@ -94,8 +99,8 @@ integer i;
 //Multiplexers
 	//mux with RegDst control
 	mult2_to_1_5  mult1(out1, instruc[20:16],instruc[15:11],regdest);
-	//mux with ALUSrc control
-	mult2_to_1_32 mult2(out2, readdata2,extad,alusrc);
+	//mux with ALUSrc control, MODIFIED WITH new ZEXTAD
+	mult2_to_1_32 mult2(out2, datab, ori ? zextad : extad, alusrc);
 	//mux with MemToReg control
 	mult2_to_1_32 mult3(out3, alu_result,dpack,memtoreg);
 	//mux with (Branch&ALUZero) control

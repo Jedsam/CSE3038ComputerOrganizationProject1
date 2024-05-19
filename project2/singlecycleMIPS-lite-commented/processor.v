@@ -14,7 +14,7 @@ wire [31:0]
 	extad,		//Output of sign-extend unit 
 	adder1out,	//Output of adder which adds PC and 4-add1
 	adder2out,	//Output of adder which adds PC+4 and 2 shifted sign-extend result-add2
-	sextad;		//Output of shift left 2 unit (bottom)
+	sextad,		//Output of shift left 2 unit (bottom)
 	shl2_jump;	//Output of shift left 2 unit (upper/jump part)
 wire [5:0] 
 	inst31_26;	//31-26 bits of instruction (opcode)
@@ -42,10 +42,9 @@ wire zout,	//Zero output of ALU
 	wire [4:0] rd;  // To hold the rd field from the instruction
 
 //wire for zero-extended immediate, for "ori"
-wire [31:0] zextad;
+	wire [31:0] zextad;
 	// Instantiate the zero extension unit
 	zeroext zext(instruc[15:0], zextad);
-
 
 //added for "balrnv"; new overflow check (the V flag), new status register:
 	wire vout, nout; // Overflow flag from ALU
@@ -53,7 +52,7 @@ wire [31:0] zextad;
 	// Instantiate ALU with overflow detection
 	alu32 alu1(alu_result, readdata1, out2, zout, vout, nout, gout);
 	// Status register to capture ALU flags
-	status_register sr1(clk, vout, zout, v_flag, z_flag, n_flag);
+	status_register sr1(clk, vout, zout, nout, v_flag, z_flag, n_flag);
 
 // Register file connections
     	reg [31:0] registerfile[0:31];
@@ -150,7 +149,7 @@ integer i;
 	//Shift-left 2 unit
 	shift shift2(sextad,extad);
 	
-	shift shift2_jump(shl2_jump, inst25_0);
+	shift_26bit shift2_jump(shl2_jump, inst25_0);
 
 	assign mult4select=branch && zout; 
 

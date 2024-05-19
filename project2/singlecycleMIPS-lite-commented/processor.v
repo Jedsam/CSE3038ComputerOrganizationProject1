@@ -10,21 +10,27 @@ wire [31:0]
 	out2,		//Output of mux with ALUSrc control-mult2
 	out3,		//Output of mux with MemToReg control-mult3
 	out4,		//Output of mux with (Branch&ALUZero) control-mult4
+	out5,		//Output of mux with jump adress and mux4 result inputs,
 	alu_result,	//ALU result
 	extad,		//Output of sign-extend unit 
 	adder1out,	//Output of adder which adds PC and 4-add1
 	adder2out,	//Output of adder which adds PC+4 and 2 shifted sign-extend result-add2
 	sextad,		//Output of shift left 2 unit (bottom)
-	shl2_jump;	//Output of shift left 2 unit (upper/jump part)
+	jump_adress;
 wire [5:0] 
 	inst31_26;	//31-26 bits of instruction (opcode)
 wire [4:0] 
 	inst25_21,	//25-21 bits of instruction
 	inst20_16,	//20-16 bits of instruction
 	inst15_11,	//15-11 bits of instruction
-	out1;		//Write register select input of Register File, output of mux with RegDst control signal
+	out1,		//Write register select input of Register File, output of mux with RegDst control signal
+	link_reg;
 wire [15:0] 
 	inst15_0;	//15-0 bits of instruction
+wire [25:0] 
+	inst25_0;	//25-0 bits of instruction
+wire [27:0]
+	shl2_jump;	//Output of shift left 2 unit (upper/jump part)
 wire [31:0] 
 	instruc,	//current instruction
 	dpack;	//Read data output of memory (data read from memory)
@@ -34,8 +40,8 @@ wire zout,	//Zero output of ALU
 	mult5select,	//Selector of mux with jump adress and mux4 result inputs, originally controlled by jump control signal)
 	mult4select,	//Output of AND gate with Branch and ZeroOut inputs
 	//Control signals
-		regdest,alusrc,memtoreg,regwrite,memread,memwrite,branch,aluop1,aluop0,ori; 
-		//bltzal signal is added later in the code
+	regdest,alusrc,memtoreg,regwrite,memread,memwrite,branch,aluop1,aluop0,ori; 
+	//bltzal signal is added later in the code
 
 //wires for "balrnv"
 	// Decode additional control signals
@@ -54,15 +60,15 @@ wire zout,	//Zero output of ALU
 	alu32 alu1(alu_result, readdata1, out2, zout, vout, nout, gout);
 	// Status register to capture ALU flags
 	status_register sr1(clk, vout, zout, nout, v_flag, z_flag, n_flag);
-	
+
 // wires for bltzal branching ("nout" flag is already defined for balrnv before), "bltzal" is also a control signal:
 	wire bltzal, pcsrc_bltzal, final_branch;
-		// New AND gate for bltzal and nout (negative out)
-		assign pcsrc_bltzal = bltzal && nout;
-		// OR gate to determine final branch decision
-		assign final_branch = (mult4select) | pcsrc_bltzal;
-	
-	
+	// New AND gate for bltzal and nout (negative out)
+	assign pcsrc_bltzal = bltzal && nout;
+	// OR gate to determine final branch decision
+	assign final_branch = (mult4select) | pcsrc_bltzal;
+
+
 // Register file connections
     	reg [31:0] registerfile[0:31];
     	assign readdata1 = registerfile[inst25_21]; // Read register 1
@@ -108,7 +114,7 @@ integer i;
 	//mux with RegDst control
 	mult2_to_1_5  mult1(out1, instruc[20:16],instruc[15:11],regdest);
 	//mux with ALUSrc control, MODIFIED WITH new ZEXTAD
-	mult2_to_1_32 mult2(out2, datab, ori ? zextad : extad, alusrc);
+	mult2_to_1_32 mult2(out2, readdata2, ori ? zextad : extad, alusrc);
 	//mux with MemToReg control
 	mult2_to_1_32 mult3(out3, alu_result,dpack,memtoreg);
 	//mux with (Branch&ALUZero) control
@@ -176,7 +182,7 @@ integer i;
 //initialize datamemory,instruction memory and registers
 //read initial data from files given in hex
 initial begin
-	$readmemh("initDm.dat",datmem); //read Data Memory
+	$readmemh("initDM.dat",datmem); //read Data Memory
 	$readmemh("initIM.dat",mem);//read Instruction Memory
 	$readmemh("initReg.dat",registerfile);//read Register File
 

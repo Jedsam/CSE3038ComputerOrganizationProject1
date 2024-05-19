@@ -34,7 +34,8 @@ wire zout,	//Zero output of ALU
 	mult5select,	//Selector of mux with jump adress and mux4 result inputs, originally controlled by jump control signal)
 	mult4select,	//Output of AND gate with Branch and ZeroOut inputs
 	//Control signals
-		regdest,alusrc,memtoreg,regwrite,memread,memwrite,branch,aluop1,aluop0;
+		regdest,alusrc,memtoreg,regwrite,memread,memwrite,branch,aluop1,aluop0,ori; 
+		//bltzal signal is added later in the code
 
 //wires for "balrnv"
 	// Decode additional control signals
@@ -47,13 +48,21 @@ wire zout,	//Zero output of ALU
 	zeroext zext(instruc[15:0], zextad);
 
 //added for "balrnv"; new overflow check (the V flag), new status register:
-	wire vout, nout; // Overflow flag from ALU
+	wire vout, nout; // Overflow and negative flags from ALU
 	wire v_flag, z_flag, n_flag; // Status register outputs
 	// Instantiate ALU with overflow detection
 	alu32 alu1(alu_result, readdata1, out2, zout, vout, nout, gout);
 	// Status register to capture ALU flags
 	status_register sr1(clk, vout, zout, nout, v_flag, z_flag, n_flag);
-
+	
+// wires for bltzal branching ("nout" flag is already defined for balrnv before), "bltzal" is also a control signal:
+	wire bltzal, pcsrc_bltzal, final_branch;
+		// New AND gate for bltzal and nout (negative out)
+		assign pcsrc_bltzal = bltzal && nout;
+		// OR gate to determine final branch decision
+		assign final_branch = (mult4select) | pcsrc_bltzal;
+	
+	
 // Register file connections
     	reg [31:0] registerfile[0:31];
     	assign readdata1 = registerfile[inst25_21]; // Read register 1
@@ -103,7 +112,7 @@ integer i;
 	//mux with MemToReg control
 	mult2_to_1_32 mult3(out3, alu_result,dpack,memtoreg);
 	//mux with (Branch&ALUZero) control
-	mult2_to_1_32 mult4(out4, adder1out,adder2out,mult4select);
+	mult2_to_1_32 mult4(out4, adder1out,adder2out, final_branch);
 
 	assign jump_adress={adder1out[31:28], shl2_jump};
 	mult2_to_1_32 mult5(out5, out4, jump_adress, mult5select);
@@ -138,7 +147,7 @@ integer i;
 
 	//Control unit
 	control cont(instruc[31:26],regdest,alusrc,memtoreg,regwrite,memread,memwrite,branch,
-	aluop1,aluop0);
+	aluop1,aluop0, ori, bltztal);
 
 	//Sign extend unit
 	signext sext(instruc[15:0],extad);

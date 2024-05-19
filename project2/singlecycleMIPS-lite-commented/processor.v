@@ -11,10 +11,11 @@ wire [31:0]
 	out3,		//Output of mux with MemToReg control-mult3
 	out4,		//Output of mux with (Branch&ALUZero) control-mult4
 	alu_result,	//ALU result
-	extad,		//Output of sign-extend unit
+	extad,		//Output of sign-extend unit 
 	adder1out,	//Output of adder which adds PC and 4-add1
 	adder2out,	//Output of adder which adds PC+4 and 2 shifted sign-extend result-add2
-	sextad;		//Output of shift left 2 unit
+	sextad;		//Output of shift left 2 unit (bottom)
+	shl2_jump;	//Output of shift left 2 unit (upper/jump part)
 wire [5:0] 
 	inst31_26;	//31-26 bits of instruction (opcode)
 wire [4:0] 
@@ -30,7 +31,8 @@ wire [31:0]
 wire [2:0] 
 	gout;	//Output of ALU control unit
 wire zout,	//Zero output of ALU
-	pcsrc,	//Output of AND gate with Branch and ZeroOut inputs
+	mult5select,	//Selector of mux with jump adress and mux4 result inputs, originally controlled by jump control signal)
+	mult4select,	//Output of AND gate with Branch and ZeroOut inputs
 	//Control signals
 		regdest,alusrc,memtoreg,regwrite,memread,memwrite,branch,aluop1,aluop0;
 
@@ -53,6 +55,8 @@ wire zout,	//Zero output of ALU
     	assign readdata1 = registerfile[inst25_21]; // Read register 1
     	assign readdata2 = registerfile[inst20_16]; // Read register 2
     
+
+	//assign mult5select = 	buraya jump || jspal || (balrnv && Status[V]) || (baln && Status[N]) gelecek
   	//for "balrnv"
     	assign rd = instruc[15:11];  // Extracting rd from the instruction
 	assign link = (inst31_26 == 6'b101111);  // link = balrnv && jmnor && bltzal && jspal && baln gibi bir ?ey olacak, ?u an sadaece balrnv.
@@ -74,6 +78,7 @@ integer i;
 	 assign instruc={mem[pc[4:0]],mem[pc[4:0]+1],mem[pc[4:0]+2],mem[pc[4:0]+3]};
 	 assign inst31_26=instruc[31:26];
 	 assign inst25_21=instruc[25:21];
+	 assign inst25_0=instruc[25:0];
 	 assign inst20_16=instruc[20:16];
 	 assign inst15_11=instruc[15:11];
 	 assign inst15_0=instruc[15:0];
@@ -94,7 +99,10 @@ integer i;
 	//mux with MemToReg control
 	mult2_to_1_32 mult3(out3, alu_result,dpack,memtoreg);
 	//mux with (Branch&ALUZero) control
-	mult2_to_1_32 mult4(out4, adder1out,adder2out,pcsrc);
+	mult2_to_1_32 mult4(out4, adder1out,adder2out,mult4select);
+
+	assign jump_adress={adder1out[31:28], shl2_jump};
+	mult2_to_1_32 mult5(out5, out4, jump_adress, mult5select);
 	
 	// MUX to select link register (either rd or $31), for "balrnv"
     	mult2_to_1_5 link_reg_select(link_reg, rd, 5'd31, link);	// bu ?u an sadece balrnv için link yap?yor ama 5 instructionda link var, hepsi için düzenlenmesi gerekiyor.
@@ -136,8 +144,10 @@ integer i;
 
 	//Shift-left 2 unit
 	shift shift2(sextad,extad);
+	
+	shift shift2_jump(shl2_jump, inst25_0);
 
-	assign pcsrc=branch && zout; 
+	assign mult4select=branch && zout; 
 
     
 //PC update logic to handle normal operation and branch, for "balrnv"

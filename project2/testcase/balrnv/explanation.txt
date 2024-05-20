@@ -1,0 +1,20 @@
+lw $0, 0($8) # Load -2^31 110001 00000 01000 0000000000000000
+lw $1, 0($8) # Load -2^31 110001 00001 01000 0000000000000000
+add $2, $0, $1 # overflow 000000 00000 00001 00010 000000 100000
+balrnv $4, $5 # jumps to direct address in $4 000000 00100 00101 00000 00000 010111
+add $6, $3, $6 # skipped 000000 00011 00110 00110 00000 100000
+sw $7, 0($7)  # not skipped, memory[0] = 0 110101 00111 00111 0000000000000000
+
+resultingRegister =  
+0 - x0
+1 - x0
+2 - x0
+3 - xFFFFFFFF
+4 - x18
+5 - x14
+6 - 0
+memory
+0 - 0
+1 - xFFFFFFFF
+2 - xFFFFFFFF
+3 - xFFFFFFFF

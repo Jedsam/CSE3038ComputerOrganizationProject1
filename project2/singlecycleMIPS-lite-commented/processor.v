@@ -182,9 +182,9 @@ integer i;
 //initialize datamemory,instruction memory and registers
 //read initial data from files given in hex
 initial begin
-	$readmemh("initDM.dat",datmem); //read Data Memory
-	$readmemh("initIM.dat",mem);//read Instruction Memory
-	$readmemh("initReg.dat",registerfile);//read Register File
+	$readmemb("initDM.dat",datmem); //read Data Memory
+	$readmemb("initIM.dat",mem);//read Instruction Memory
+	$readmemb("initReg.dat",registerfile);//read Register File
 
 	for(i=0; i<31; i=i+1)
 	$display("Instruction Memory[%0d]= %h  ",i,mem[i],"Data Memory[%0d]= %h   ",i,datmem[i],
@@ -193,7 +193,7 @@ end
 
 initial begin
 	pc=0;
-	#400 $finish;	
+	#400 $finish;
 end
 
 initial begin

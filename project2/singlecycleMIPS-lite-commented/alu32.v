@@ -11,12 +11,12 @@ reg zout, vout, nout;
 
 always @(a or b or gin) begin
 	case(gin)
+	
 		3'b010: begin //ALU control line=010, ADD
 			result=a+b; 		
 			 // Detect overflow for addition
             vout=((a[31] && b[31] && !result[31]) || (!a[31] && !b[31] && result[31]));
         end
-	
 	
 		3'b110: begin  //ALU control line=110, SUB
 			result=a+1+(~b);	
@@ -33,6 +33,9 @@ always @(a or b or gin) begin
 		3'b000: result=a & b;	//ALU control line=000, AND
 		
 		3'b001: result=a|b;		//ALU control line=001, OR
+		
+		3'b011: sum = ~(a | b);            // new,for "jmnor", NOR
+	
 		
 		default: result=31'bx;	
 	endcase

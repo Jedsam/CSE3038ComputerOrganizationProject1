@@ -13,6 +13,8 @@ begin
 	if (f1&~(f3))gout=3'b110;		//function code=0x10,ALU control=110 (sub)
 	if (f2&f0)gout=3'b001;			//function code=x1x1,ALU control=001 (or)
 	if (f2&~(f0))gout=3'b000;		//function code=x1x0,ALU control=000 (and)
+	if (f3 & f2 & ~f1 & f0 & f0)gout = 3'b011; // funct=100101 (jmnor)
+
 end
 end
 endmodule

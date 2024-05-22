@@ -43,7 +43,7 @@ wire zout,	//Zero output of ALU
 	//Control signals
 	regdest,alusrc,memtoreg,regwrite,memread,memwrite,branch,aluop1,aluop0,jump,balrnv,jmnor,ori,bltzal,jspal,baln; 
 
-	assign balrnv = ((inst31_26 == 6'b000000) && (instruc[5:0] == 6'b010111));
+	assign balrnv = ((inst31_26 == 6'b000000) && (instruc[5:0] == 6'b010111)); // balrnv and jmnor control signals opcode=0 and funct codes for each
 	assign jmnor = ((inst31_26 == 6'b000000) && (instruc[5:0] == 6'b100101));
 
 //wire for zero-extended immediate, for "ori"
@@ -89,20 +89,21 @@ integer i;
 
 
 //Registers
-	assign readdata1=registerfile[inst25_21];//Read register 1
-	assign readdata2=registerfile[inst20_16];//Read register 2
+	assign readdata1=registerfile[inst25_21]; //Read register 1
+	assign readdata2=registerfile[inst20_16]; //Read register 2
+	
 
 //Data Memory Read (sum stores adress)
 	assign dpack={datmem[alu_result[5:0]],datmem[alu_result[5:0]+1],datmem[alu_result[5:0]+2],datmem[alu_result[5:0]+3]};
 
 //Multiplexers
-	//mux with RegDst control
-	mult2_to_1_5  mult1(out1, instruc[20:16],instruc[15:11],regdest);	// bundan sonra bltzal için bir mux gelecek
+	//1st mux (with RegDst control)
+	mult2_to_1_5  mult1(out1, instruc[20:16],instruc[15:11],regdest);	// bundan sonra bltzal için bir mux gelecek 25 numaral? registera yazmak için 
 	
-	//mux with ALUSrc control, MODIFIED WITH new ZEXTAD
+	//2nd mux (with ALUSrc control, MODIFIED WITH new ZEXTAD)
 	mult2_to_1_32 mult2(out2, readdata2, ori ? zextad : extad, alusrc);
 	
-	//mux with MemToReg control
+	//3rd mux (with MemToReg control)
 	mult2_to_1_32 mult3(out3, alu_result,dpack,memtoreg);
 	
 	//4th mux (with pc+4 and Add component input)
@@ -113,25 +114,20 @@ integer i;
 	assign jump_adress={adder1out[31:28], shl2_jump};
 	assign mult5select = (jump || jmnor || jspal || (balrnv && v_flag) || (baln && n_flag));
 	mult2_to_1_32 mult5(out5, out4, jump_adress, mult5select);
-	
+	assign pc = out5;	
+
 	// MUX to select write data (output of mux3 or pc+4)
 	assign link = ((balrnv && v_flag) || jmnor || (bltzal && nout) || jspal || (baln && n_flag));
-    	mult2_to_1_32 mult6(writedata, out3, adder1out, link);	// bu ?u an sadece balrnv için link yap?yor ama 5 instructionda link var, hepsi için düzenlenmesi gerekiyor.
-									// link = balrnv && jmnor && bltzal && jspal && baln gibi bir ?ey olacak
-									// zaten link 1 oldu?unda link_reg = rd oluyor link 0 olursa da lik_reg kulan?lm?yor, di?er durumda 31 yapmam?z?n bence manas? yok.
+    	mult2_to_1_32 mult6(writedata, out3, adder1out, link);	
 
-//Write data to register file, for "balrnv"
+
+	//Write data to register file
 	always @(posedge clk) begin
-	    if (regwrite) begin
-  	      if (link && !v_flag) begin
-  	          // Special case for balrnv: Write link address (PC + 4) to link register
-   	         //registerfile[link_reg] <= adder1out;
-		  end else begin
-   	         // Normal register write operation
-    	        registerfile[out1] <= out3;
-    	  end
-  	   end
+    		if (regwrite) begin
+        		registerfile[out1] <= writedata;
+    		end 
 	end
+
 
 // alu, adder and control logic connections
 	//ALU unit
@@ -161,12 +157,12 @@ integer i;
     
 //PC update logic to handle normal operation and branch, for "balrnv"
     // Branching logic
-    	always @(negedge clk) begin
-        	if ((branch && z_flag) || (link && !v_flag))
-            	pc <= registerfile[inst25_21];  // Branch to address in $rs
-        	else
-           	 pc <= out5;  // Normal PC update (e.g., PC + 4 or branch target)
-    	end
+    	//always @(negedge clk) begin
+        	//if ((branch && z_flag) || (link && !v_flag))
+           // 	pc <= registerfile[inst25_21];  // Branch to address in $rs
+        	//else
+           	// pc <= out5;  // Normal PC update (e.g., PC + 4 or branch target)
+    	//end
 
 
 //initialize datamemory,instruction memory and registers

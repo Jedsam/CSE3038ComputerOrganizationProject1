@@ -7,6 +7,7 @@ reg [7:0] datmem[0:31],mem[0:31]; //32-size data and instruction memory (8 bit(1
 wire [31:0] 
 	readdata1,	//Read data 1 output of Register File
 	readdata2,	//Read data 2 output of Register File
+	writedata,	//Write data input of Register File
 	out2,		//Output of mux with ALUSrc control-mult2
 	out3,		//Output of mux with MemToReg control-mult3
 	out4,		//Output of mux with (Branch&ALUZero) control-mult4
@@ -23,8 +24,7 @@ wire [4:0]
 	inst25_21,	//25-21 bits of instruction
 	inst20_16,	//20-16 bits of instruction
 	inst15_11,	//15-11 bits of instruction
-	out1,		//Write register select input of Register File, output of mux with RegDst control signal
-	link_reg;
+	out1;		//Write register select input of Register File, output of mux with RegDst control signal
 wire [15:0] 
 	inst15_0;	//15-0 bits of instruction
 wire [25:0] 
@@ -39,14 +39,12 @@ wire [2:0]
 wire zout,	//Zero output of ALU
 	mult5select,	//Selector of mux with jump adress and mux4 result inputs, originally controlled by jump control signal)
 	mult4select,	//Output of AND gate with Branch and ZeroOut inputs
+	link,		// Signal to control the link address storage	(mult6select)
 	//Control signals
-	regdest,alusrc,memtoreg,regwrite,memread,memwrite,branch,aluop1,aluop0,ori; 
-	//bltzal signal is added later in the code
+	regdest,alusrc,memtoreg,regwrite,memread,memwrite,branch,aluop1,aluop0,jump,balrnv,jmnor,ori,bltzal,jspal,baln; 
 
-//wires for "balrnv"
-	// Decode additional control signals
-	wire link;  // Signal to control the link address storage
-	wire [4:0] rd;  // To hold the rd field from the instruction
+	assign balrnv = ((inst31_26 == 6'b000000) && (instruc[5:0] == 6'b010111));
+	assign jmnor = ((inst31_26 == 6'b000000) && (instruc[5:0] == 6'b100101));
 
 //wire for zero-extended immediate, for "ori"
 	wire [31:0] zextad;
@@ -61,25 +59,12 @@ wire zout,	//Zero output of ALU
 	// Status register to capture ALU flags
 	status_register sr1(clk, vout, zout, nout, v_flag, z_flag, n_flag);
 
-// wires for bltzal branching ("nout" flag is already defined for balrnv before), "bltzal" is also a control signal:
-	wire bltzal, pcsrc_bltzal, final_branch;
-	// New AND gate for bltzal and nout (negative out)
-	assign pcsrc_bltzal = bltzal && nout;
-	// OR gate to determine final branch decision
-	assign final_branch = (mult4select) | pcsrc_bltzal;
-
-
 // Register file connections
     	reg [31:0] registerfile[0:31];
     	assign readdata1 = registerfile[inst25_21]; // Read register 1
     	assign readdata2 = registerfile[inst20_16]; // Read register 2
     
-
-	//assign mult5select = 	buraya jump || jspal || (balrnv && Status[V]) || (baln && Status[N]) gelecek
-  	//for "balrnv"
-    	assign rd = instruc[15:11];  // Extracting rd from the instruction
-	assign link = (inst31_26 == 6'b101111);  // link = balrnv && jmnor && bltzal && jspal && baln gibi bir ?ey olacak, ?u an sadaece balrnv.
-
+	
 integer i;
 
 //Data Memory Write
@@ -112,19 +97,26 @@ integer i;
 
 //Multiplexers
 	//mux with RegDst control
-	mult2_to_1_5  mult1(out1, instruc[20:16],instruc[15:11],regdest);
+	mult2_to_1_5  mult1(out1, instruc[20:16],instruc[15:11],regdest);	// bundan sonra bltzal için bir mux gelecek
+	
 	//mux with ALUSrc control, MODIFIED WITH new ZEXTAD
 	mult2_to_1_32 mult2(out2, readdata2, ori ? zextad : extad, alusrc);
+	
 	//mux with MemToReg control
 	mult2_to_1_32 mult3(out3, alu_result,dpack,memtoreg);
-	//mux with (Branch&ALUZero) control
-	mult2_to_1_32 mult4(out4, adder1out,adder2out, final_branch);
+	
+	//4th mux (with pc+4 and Add component input)
+	assign mult4select = ((branch && zout) || (bltzal && nout)); 
+	mult2_to_1_32 mult4(out4, adder1out,adder2out, mult4select);
 
+	// 5th mux (with jump adress and 4th branch inputs / last branch before pc)
 	assign jump_adress={adder1out[31:28], shl2_jump};
+	assign mult5select = (jump || jmnor || jspal || (balrnv && v_flag) || (baln && n_flag));
 	mult2_to_1_32 mult5(out5, out4, jump_adress, mult5select);
 	
-	// MUX to select link register (either rd or $31), for "balrnv"
-    	mult2_to_1_5 link_reg_select(link_reg, rd, 5'd31, link);	// bu ?u an sadece balrnv için link yap?yor ama 5 instructionda link var, hepsi için düzenlenmesi gerekiyor.
+	// MUX to select write data (output of mux3 or pc+4)
+	assign link = ((balrnv && v_flag) || jmnor || (bltzal && nout) || jspal || (baln && n_flag));
+    	mult2_to_1_32 mult6(writedata, out3, adder1out, link);	// bu ?u an sadece balrnv için link yap?yor ama 5 instructionda link var, hepsi için düzenlenmesi gerekiyor.
 									// link = balrnv && jmnor && bltzal && jspal && baln gibi bir ?ey olacak
 									// zaten link 1 oldu?unda link_reg = rd oluyor link 0 olursa da lik_reg kulan?lm?yor, di?er durumda 31 yapmam?z?n bence manas? yok.
 
@@ -133,7 +125,7 @@ integer i;
 	    if (regwrite) begin
   	      if (link && !v_flag) begin
   	          // Special case for balrnv: Write link address (PC + 4) to link register
-   	         registerfile[link_reg] <= adder1out;
+   	         //registerfile[link_reg] <= adder1out;
 		  end else begin
    	         // Normal register write operation
     	        registerfile[out1] <= out3;
@@ -153,7 +145,7 @@ integer i;
 
 	//Control unit
 	control cont(instruc[31:26],regdest,alusrc,memtoreg,regwrite,memread,memwrite,branch,
-	aluop1,aluop0, ori, bltztal);
+	aluop1,aluop0,jump,ori,bltztal,jpsal,baln);
 
 	//Sign extend unit
 	signext sext(instruc[15:0],extad);
@@ -166,8 +158,6 @@ integer i;
 	
 	shift_26bit shift2_jump(shl2_jump, inst25_0);
 
-	assign mult4select=branch && zout; 
-
     
 //PC update logic to handle normal operation and branch, for "balrnv"
     // Branching logic
@@ -175,7 +165,7 @@ integer i;
         	if ((branch && z_flag) || (link && !v_flag))
             	pc <= registerfile[inst25_21];  // Branch to address in $rs
         	else
-           	 pc <= out4;  // Normal PC update (e.g., PC + 4 or branch target)
+           	 pc <= out5;  // Normal PC update (e.g., PC + 4 or branch target)
     	end
 
 

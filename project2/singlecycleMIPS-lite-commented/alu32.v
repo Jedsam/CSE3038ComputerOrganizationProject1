@@ -33,6 +33,8 @@ always @(a or b or gin) begin
 		3'b000: result=a & b;	//ALU control line=000, AND
 		
 		3'b001: result=a|b;		//ALU control line=001, OR
+
+		3'b011: result=~(a|b);		//NOR operation
 		
 		default: result=31'bx;	
 	endcase

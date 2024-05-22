@@ -13,6 +13,16 @@ begin
 	if (f1&~(f3))gout=3'b110;		//function code=0x10,ALU control=110 (sub)
 	if (f2&f0)gout=3'b001;			//function code=x1x1,ALU control=001 (or)
 	if (f2&~(f0))gout=3'b000;		//function code=x1x0,ALU control=000 (and)
+
+
+	 if (~(f3|f2|f1|f0)) gout = 3'b010;  // function code = 0000, ALU control = 010 (add)
+    	else if (f3 & f1) gout = 3'b111;    // function code = 1x1x, ALU control = 111 (set on less than)
+    	else if (f1 & ~f3) gout = 3'b110;   // function code = 0x10, ALU control = 110 (sub)
+    	else if (f2 & f0) begin
+        	if (f3 == 0 && f1 == 0) gout = 3'b011;  // function code = 0101, ALU control = 011 (nor) 
+        	else gout = 3'b001;                    // function code = x1x1, ALU control = 001 (or)
+    		end
+    	else if (f2 & ~f0) gout = 3'b000;  // function code = x1x0, ALU control = 000 (and)
 end
 end
 endmodule

@@ -73,10 +73,10 @@ integer i;
 	always @(posedge clk)
 	if (memwrite) 	begin 
 	//sum stores address,readdata2 stores the value to be written
-	datmem[alu_result[4:0]+3]=readdata2[7:0];
-	datmem[alu_result[4:0]+2]=readdata2[15:8];
-	datmem[alu_result[4:0]+1]=readdata2[23:16];
-	datmem[alu_result[4:0]]=readdata2[31:24];
+	datmem[alu_result[4:0]+3]=out9[7:0];
+	datmem[alu_result[4:0]+2]=out9[15:8];
+	datmem[alu_result[4:0]+1]=out9[23:16];
+	datmem[alu_result[4:0]]=out9[31:24];
 	end
 
 //Instruction memory read

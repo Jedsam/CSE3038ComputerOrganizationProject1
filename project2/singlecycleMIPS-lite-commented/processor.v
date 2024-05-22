@@ -88,11 +88,6 @@ integer i;
 	 assign inst20_16=instruc[20:16];
 	 assign inst15_11=instruc[15:11];
 	 assign inst15_0=instruc[15:0];
-
-
-//Registers
-	assign readdata1=registerfile[inst25_21]; //Read register 1
-	assign readdata2=registerfile[inst20_16]; //Read register 2
 	
 
 //Data Memory Read (sum stores adress)
@@ -131,6 +126,16 @@ integer i;
 	
 	//9th MUX for selecting between Read Data 2 or pc+4
 	mult2_to_1_32 mult9(out9, readdata2, adder1out, jspal);
+	
+	//10th MUX to select Read Register 1 address based on jspal control signal
+	wire [4:0] read_reg1_select;
+	mult2_to_1_5 mult10(read_reg1_select, instruc[25:21], 5'b11101, jspal);
+	assign readdata1 = registerfile[read_reg1_select]; // updating where readdata1 is originally assigned
+
+	//11th MUX to select Write Register destination for bltzal instruction
+	wire [4:0] write_reg_select;
+	mult2_to_1_5 mult11(write_reg_select, out1, 5'b11001, bltzal);
+	assign writedata = write_reg_select; //updating writedata here
 
 
 

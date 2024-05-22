@@ -12,6 +12,8 @@ wire [31:0]
 	out3,		//Output of mux with MemToReg control-mult3
 	out4,		//Output of mux with (Branch&ALUZero) control-mult4
 	out5,		//Output of mux with jump adress and mux4 result inputs,
+	out7, 		//Output of mux 7
+	out9,		//Output of mux 9
 	alu_result,	//ALU result
 	extad,		//Output of sign-extend unit 
 	adder1out,	//Output of adder which adds PC and 4-add1
@@ -120,7 +122,19 @@ integer i;
 	assign link = ((balrnv && v_flag) || jmnor || (bltzal && nout) || jspal || (baln && n_flag));
     	mult2_to_1_32 mult6(writedata, out3, adder1out, link);	
 
+	//7th MUX for selecting between Read Data 1 or Jump Address based on balrnv control signal
+	mult2_to_1_32 mult7(out7, readdata1, jump_adress, balrnv);
+	
+	//8th MUX for selecting between Data Memory Read or output of first MUX based on jmnor or jspal
+	wire jmnor_jspal_select = jmnor || jspal;
+	mult2_to_1_32 mult8(jump_adress, dpack, out7, jmnor_jspal_select);
+	
+	//9th MUX for selecting between Read Data 2 or pc+4
+	mult2_to_1_32 mult9(out9, readdata2, adder1out, jspal);
 
+
+
+	
 	//Write data to register file
 	always @(posedge clk) begin
     		if (regwrite) begin

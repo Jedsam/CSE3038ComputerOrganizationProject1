@@ -88,6 +88,9 @@ integer i;
 	 assign inst20_16=instruc[20:16];
 	 assign inst15_11=instruc[15:11];
 	 assign inst15_0=instruc[15:0];
+
+
+	assign readdata2=registerfile[inst20_16]; //Read register 2
 	
 
 //Data Memory Read (sum stores adress)
@@ -103,30 +106,29 @@ integer i;
 	//3rd mux (with MemToReg control)
 	mult2_to_1_32 mult3(out3, alu_result,dpack,memtoreg);
 	
-	//4th mux (with pc+4 and Add component input)
-	assign mult4select = ((branch && zout) || (bltzal && nout)); 
+	//4th mux (with PC+4 and Add component input)
+	assign mult4select = ((branch && zout) || (bltzal && nout));
 	mult2_to_1_32 mult4(out4, adder1out,adder2out, mult4select);
 
-	// 5th mux (with jump adress and 4th branch inputs / last branch before pc)
+	// 5th mux (with jump adress and 4th branch inputs / last branch before PC)
 	assign jump_adress={adder1out[31:28], shl2_jump};
 	assign mult5select = (jump || jmnor || jspal || (balrnv && v_flag) || (baln && n_flag));
 	mult2_to_1_32 mult5(out5, out4, jump_adress, mult5select);
-	assign pc = out5;	
 
-	// MUX to select write data (output of mux3 or pc+4)
+	// MUX to select write data (output of mux3 or PC+4)
 	assign link = ((balrnv && v_flag) || jmnor || (bltzal && nout) || jspal || (baln && n_flag));
     	mult2_to_1_32 mult6(writedata, out3, adder1out, link);	
-
+	
 	//7th MUX for selecting between Read Data 1 or Jump Address based on balrnv control signal
-	mult2_to_1_32 mult7(out7, readdata1, jump_adress, balrnv);
-	
+	mult2_to_1_32 mult7(out7, jump_adress, readdata1, balrnv);
+
 	//8th MUX for selecting between Data Memory Read or output of first MUX based on jmnor or jspal
-	wire jmnor_jspal_select = jmnor || jspal;
-	mult2_to_1_32 mult8(jump_adress, dpack, out7, jmnor_jspal_select);
-	
+	wire mult8select = jmnor || jspal;
+	mult2_to_1_32 mult8(jump_adress, out7, dpack, mult8select);
+
 	//9th MUX for selecting between Read Data 2 or pc+4
 	mult2_to_1_32 mult9(out9, readdata2, adder1out, jspal);
-	
+
 	//10th MUX to select Read Register 1 address based on jspal control signal
 	wire [4:0] read_reg1_select;
 	mult2_to_1_5 mult10(read_reg1_select, instruc[25:21], 5'b11101, jspal);
@@ -135,15 +137,11 @@ integer i;
 	//11th MUX to select Write Register destination for bltzal instruction
 	wire [4:0] write_reg_select;
 	mult2_to_1_5 mult11(write_reg_select, out1, 5'b11001, bltzal);
-	assign writedata = write_reg_select; //updating writedata here
 
-
-
-	
 	//Write data to register file
 	always @(posedge clk) begin
     		if (regwrite) begin
-        		registerfile[out1] <= writedata;
+        		registerfile[write_reg_select] <= writedata;
     		end 
 	end
 
@@ -160,7 +158,7 @@ integer i;
 
 	//Control unit
 	control cont(instruc[31:26],regdest,alusrc,memtoreg,regwrite,memread,memwrite,branch,
-	aluop1,aluop0,jump,ori,bltztal,jpsal,baln);
+	aluop1,aluop0,jump,ori,bltzal,jspal,baln);
 
 	//Sign extend unit
 	signext sext(instruc[15:0],extad);
@@ -174,15 +172,9 @@ integer i;
 	shift_26bit shift2_jump(shl2_jump, inst25_0);
 
     
-//PC update logic to handle normal operation and branch, for "balrnv"
-    // Branching logic
-    	//always @(negedge clk) begin
-        	//if ((branch && z_flag) || (link && !v_flag))
-           // 	pc <= registerfile[inst25_21];  // Branch to address in $rs
-        	//else
-           	// pc <= out5;  // Normal PC update (e.g., PC + 4 or branch target)
-    	//end
 
+	always @(negedge clk)
+	pc = out5;
 
 //initialize datamemory,instruction memory and registers
 //read initial data from files given in hex
@@ -198,6 +190,7 @@ end
 
 initial begin
 	pc=0;
+	
 	#400 $finish;
 end
 

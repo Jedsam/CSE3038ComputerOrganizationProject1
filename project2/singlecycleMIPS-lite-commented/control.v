@@ -18,9 +18,11 @@ assign baln = (in == 6'b011011);  // as opcode is 27
 assign regdest = rformat;
 assign alusrc = lw | sw | ori | bltzal;
 assign memtoreg = lw;
-assign regwrite = rformat | lw | ori;
+//by having "link address" in baln and bltzal, we have regwrite:  
+assign regwrite = rformat | lw | ori | baln | bltzal;
 assign memread = lw;
-assign memwrite = sw;
+//by having "link address" in jspal, we have memwrite:
+assign memwrite = sw | jspal;
 assign branch = beq;
 assign aluop1 = rformat | ori;  // ori uses a different ALU operation
 assign aluop2 = beq;

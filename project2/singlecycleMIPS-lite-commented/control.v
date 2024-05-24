@@ -19,7 +19,7 @@ assign regdest = rformat;
 assign alusrc = lw | sw | ori | bltzal;
 assign memtoreg = lw;
 //by having "link address" in baln and bltzal, we have regwrite:  
-assign regwrite = rformat | lw | ori | baln | bltzal;
+assign regwrite = rformat | lw | ori | baln | bltzal | jmnor ;
 assign memread = lw;
 //by having "link address" in jspal, we have memwrite:
 assign memwrite = sw | jspal;

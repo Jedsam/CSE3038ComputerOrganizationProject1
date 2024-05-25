@@ -13,6 +13,7 @@ wire [31:0]
 	out4,		//Output of mux with (Branch&ALUZero) control-mult4
 	out5,		//Output of mux with jump adress and mux4 result inputs,
 	out7, 		//Output of mux 7
+	out8,
 	out9,		//Output of mux 9
 	alu_result,	//ALU result
 	extad,		//Output of sign-extend unit 
@@ -89,8 +90,6 @@ integer i;
 	 assign inst15_11=instruc[15:11];
 	 assign inst15_0=instruc[15:0];
 
-
-	assign readdata2=registerfile[inst20_16]; //Read register 2
 	
 
 //Data Memory Read (sum stores adress)
@@ -111,9 +110,9 @@ integer i;
 	mult2_to_1_32 mult4(out4, adder1out,adder2out, mult4select);
 
 	// 5th mux (with jump adress and 4th branch inputs / last branch before PC)
-	assign jump_adress={adder1out[31:28], shl2_jump};
+	assign jump_adress={adder1out[31:28], shl2_jump[27:0]};
 	assign mult5select = (jump || jmnor || jspal || (balrnv && v_flag) || (baln && n_flag));
-	mult2_to_1_32 mult5(out5, out4, jump_adress, mult5select);
+	mult2_to_1_32 mult5(out5, out4, out8, mult5select);
 
 	// MUX to select write data (output of mux3 or PC+4)
 	assign link = ((balrnv && v_flag) || jmnor || (bltzal && nout) || jspal || (baln && n_flag));
@@ -124,7 +123,7 @@ integer i;
 
 	//8th MUX for selecting between Data Memory Read or output of first MUX based on jmnor or jspal
 	wire mult8select = jmnor || jspal;
-	mult2_to_1_32 mult8(jump_adress, out7, dpack, mult8select);
+	mult2_to_1_32 mult8(out8, out7, dpack, mult8select);
 
 	//9th MUX for selecting between Read Data 2 or pc+4
 	mult2_to_1_32 mult9(out9, readdata2, adder1out, jspal);

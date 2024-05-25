@@ -62,11 +62,6 @@ wire zout,	//Zero output of ALU
 	// Status register to capture ALU flags
 	status_register sr1(clk, vout, zout, nout, v_flag, z_flag, n_flag);
 
-// Register file connections
-    	reg [31:0] registerfile[0:31];
-    	assign readdata1 = registerfile[inst25_21]; // Read register 1
-    	assign readdata2 = registerfile[inst20_16]; // Read register 2
-    
 	
 integer i;
 
@@ -89,6 +84,13 @@ integer i;
 	 assign inst20_16=instruc[20:16];
 	 assign inst15_11=instruc[15:11];
 	 assign inst15_0=instruc[15:0];
+	 
+	 
+// Register file connections
+    	reg [31:0] registerfile[0:31];
+    	assign readdata1 = registerfile[inst25_21]; // Read register 1
+    	assign readdata2 = registerfile[inst20_16]; // Read register 2
+    
 
 	
 
@@ -97,7 +99,7 @@ integer i;
 
 //Multiplexers
 	//1st mux (with RegDst control)
-	mult2_to_1_5  mult1(out1, instruc[15:11], instruc[20:16], regdest);	// bundan sonra bltzal için bir mux gelecek 25 numaral? registera yazmak için 
+	mult2_to_1_5  mult1(out1, instruc[15:11], instruc[20:16], regdest);	//mux 11 comes after this
 	
 	//2nd mux (with ALUSrc control, MODIFIED WITH new ZEXTAD)
 	mult2_to_1_32 mult2(out2, readdata2, ori ? zextad : extad, alusrc);

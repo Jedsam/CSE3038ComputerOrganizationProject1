@@ -27,7 +27,8 @@ wire [4:0]
 	inst25_21,	//25-21 bits of instruction
 	inst20_16,	//20-16 bits of instruction
 	inst15_11,	//15-11 bits of instruction
-	out1;		//Write register select input of Register File, output of mux with RegDst control signal
+	out1,		//Write register select input of Register File, output of mux with RegDst control signal
+	out11;
 wire [15:0] 
 	inst15_0;	//15-0 bits of instruction
 wire [25:0] 
@@ -48,7 +49,7 @@ wire zout,	//Zero output of ALU
 
 	assign balrnv = ((inst31_26 == 6'b000000) && (instruc[5:0] == 6'b010111)); // balrnv and jmnor control signals opcode=0 and funct codes for each
 	assign jmnor = ((inst31_26 == 6'b000000) && (instruc[5:0] == 6'b100101));
-	
+
 //wire for zero-extended immediate, for "ori"
 	wire [31:0] zextad;
 	// Instantiate the zero extension unit
@@ -62,7 +63,11 @@ wire zout,	//Zero output of ALU
 	// Status register to capture ALU flags
 	status_register sr1(clk, vout, zout, nout, v_flag, z_flag, n_flag);
 
-
+// Register file connections
+    	reg [31:0] registerfile[0:31];
+    	assign readdata1 = registerfile[inst25_21]; // Read register 1
+    	assign readdata2 = registerfile[inst20_16]; // Read register 2
+    
 	
 integer i;
 
@@ -85,13 +90,6 @@ integer i;
 	 assign inst20_16=instruc[20:16];
 	 assign inst15_11=instruc[15:11];
 	 assign inst15_0=instruc[15:0];
-	 
-	 
-// Register file connections
-    	reg [31:0] registerfile[0:31];
-    	assign readdata1 = registerfile[inst25_21]; // Read register 1
-    	assign readdata2 = registerfile[inst20_16]; // Read register 2
-    
 
 	
 
@@ -100,7 +98,7 @@ integer i;
 
 //Multiplexers
 	//1st mux (with RegDst control)
-	mult2_to_1_5  mult1(out1, instruc[15:11], instruc[20:16], regdest);	//mux 11 comes after this
+	mult2_to_1_5  mult1(out1, instruc[20:16], instruc[15:11], regdest);	// bundan sonra bltzal için bir mux gelecek 25 numaral? registera yazmak için 
 	
 	//2nd mux (with ALUSrc control, MODIFIED WITH new ZEXTAD)
 	mult2_to_1_32 mult2(out2, readdata2, ori ? zextad : extad, alusrc);
@@ -119,7 +117,7 @@ integer i;
 
 	// MUX to select write data (output of mux3 or PC+4)
 	assign link = ((balrnv && v_flag) || jmnor || (bltzal && nout) || jspal || (baln && n_flag));
-    	mult2_to_1_32 mult6(writedata, out3, adder1out, link);	
+    	mult2_to_1_32 mult6(writedata, out3, adder1out, link);
 	
 	//7th MUX for selecting between Read Data 1 or Jump Address based on balrnv control signal
 	mult2_to_1_32 mult7(out7, jump_adress, readdata1, balrnv);
@@ -137,8 +135,11 @@ integer i;
 	assign readdata1 = registerfile[read_reg1_select]; // updating where readdata1 is originally assigned
 
 	//11th MUX to select Write Register destination for bltzal instruction
+	mult2_to_1_5 mult11(out11, out1, 5'b11001, bltzal);
+
 	wire [4:0] write_reg_select;
-	mult2_to_1_5 mult11(write_reg_select, out1, 5'b11001, bltzal);
+	wire mult11select = (jmnor || baln); 
+	mult2_to_1_5 mult12(write_reg_select, out11, 5'b11111, mult11select);
 
 	//Write data to register file
 	always @(posedge clk) begin
@@ -174,15 +175,10 @@ integer i;
 	shift_26bit shift2_jump(shl2_jump, inst25_0);
 
     
-//handling link adress and pc
+
+	//handling link adress and pc
 always @(posedge clk) begin
 	pc <= out5;  // Normal PC update
-    if (jmnor || baln) begin
-        registerfile[31] <= pc + 4;  // Store the link address in $31 for jmnor and baln
-    end
-    if (bltzal) begin
-        registerfile[25] <= pc + 4;  // Store the link address in $25 for bltzal
-    end 
 end
 
 //initialize datamemory,instruction memory and registers

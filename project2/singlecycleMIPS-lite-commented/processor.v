@@ -164,7 +164,7 @@ integer i;
 	signext sext(instruc[15:0],extad);
 
 	//ALU control unit
-	alucont acont(aluop1,aluop0,instruc[3],instruc[2], instruc[1], instruc[0] ,gout);
+	alucont acont(aluop1,aluop0,instruc[3],instruc[2], instruc[1], instruc[0] , instruc[31:26], gout);
 
 	//Shift-left 2 unit
 	shift shift2(sextad,extad);

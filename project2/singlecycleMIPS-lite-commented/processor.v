@@ -48,7 +48,7 @@ wire zout,	//Zero output of ALU
 
 	assign balrnv = ((inst31_26 == 6'b000000) && (instruc[5:0] == 6'b010111)); // balrnv and jmnor control signals opcode=0 and funct codes for each
 	assign jmnor = ((inst31_26 == 6'b000000) && (instruc[5:0] == 6'b100101));
-
+	
 //wire for zero-extended immediate, for "ori"
 	wire [31:0] zextad;
 	// Instantiate the zero extension unit
@@ -61,6 +61,7 @@ wire zout,	//Zero output of ALU
 	alu32 alu1(alu_result, readdata1, out2, zout, vout, nout, gout);
 	// Status register to capture ALU flags
 	status_register sr1(clk, vout, zout, nout, v_flag, z_flag, n_flag);
+
 
 	
 integer i;
@@ -173,9 +174,16 @@ integer i;
 	shift_26bit shift2_jump(shl2_jump, inst25_0);
 
     
-
-	always @(posedge clk)
-	pc = out5;
+//handling link adress and pc
+always @(posedge clk) begin
+	pc <= out5;  // Normal PC update
+    if (jmnor || baln) begin
+        registerfile[31] <= pc + 4;  // Store the link address in $31 for jmnor and baln
+    end
+    if (bltzal) begin
+        registerfile[25] <= pc + 4;  // Store the link address in $25 for bltzal
+    end 
+end
 
 //initialize datamemory,instruction memory and registers
 //read initial data from files given in hex

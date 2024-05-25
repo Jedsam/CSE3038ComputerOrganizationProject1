@@ -97,7 +97,7 @@ integer i;
 
 //Multiplexers
 	//1st mux (with RegDst control)
-	mult2_to_1_5  mult1(out1, instruc[20:16],instruc[15:11],regdest);	// bundan sonra bltzal için bir mux gelecek 25 numaral? registera yazmak için 
+	mult2_to_1_5  mult1(out1, instruc[15:11], instruc[20:16], regdest);	// bundan sonra bltzal için bir mux gelecek 25 numaral? registera yazmak için 
 	
 	//2nd mux (with ALUSrc control, MODIFIED WITH new ZEXTAD)
 	mult2_to_1_32 mult2(out2, readdata2, ori ? zextad : extad, alusrc);
@@ -172,7 +172,7 @@ integer i;
 
     
 
-	always @(negedge clk)
+	always @(posedge clk)
 	pc = out5;
 
 //initialize datamemory,instruction memory and registers

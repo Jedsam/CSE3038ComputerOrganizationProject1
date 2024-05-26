@@ -4,12 +4,9 @@ add $7, $3, $7 # skipped 000000 00011 00111 00111 00000 100000
 sw $7, 0($7)  # not skipped, memory[0] = 0 110101 00111 00111 0000000000000000
 
 resultingRegister =  
-
 6 - 0
 7 - 0
 
 memory
 0 - 0
-1 - x00000004
-2 - xFFFFFFFF
-3 - xFFFFFFFF
+datmem[7] = 000..001000

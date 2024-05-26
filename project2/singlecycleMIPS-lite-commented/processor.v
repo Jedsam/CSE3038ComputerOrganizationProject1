@@ -78,7 +78,7 @@ integer i;
 
 //Instruction memory read
 	//4-byte instruction
-	 assign instruc={mem[pc[4:0]],mem[pc[4:0]+1],mem[pc[4:0]+2],mem[pc[4:0]+3]};
+	 assign instruc={mem[pc[31:0]],mem[pc[31:0]+1],mem[pc[31:0]+2],mem[pc[31:0]+3]};
 	 assign inst31_26=instruc[31:26];
 	 assign inst25_21=instruc[25:21];
 	 assign inst25_0=instruc[25:0];

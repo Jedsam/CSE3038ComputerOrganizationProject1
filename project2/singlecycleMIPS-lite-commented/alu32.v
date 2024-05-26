@@ -4,10 +4,11 @@ input [31:0] a,b;
 input [2:0] gin;//ALU control line
 reg [31:0] result;
 reg [31:0] less;
-
+wire nout;
 
 output zout, vout, nout;	// vout and nout added here n=negative, v=overflow
-reg zout, vout, nout;
+reg zout, vout;
+assign nout = a[31];
 
 always @(a or b or gin) begin
 	case(gin)
@@ -39,7 +40,6 @@ always @(a or b or gin) begin
 		default: result=31'bx;	
 	endcase
 	zout=~(|result); //zero flag
-	if (result[31]) nout=1;
-	else nout=0;
+	
 end
 endmodule

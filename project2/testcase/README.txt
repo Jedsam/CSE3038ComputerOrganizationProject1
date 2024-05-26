@@ -1,5 +1,8 @@
-1 - ilk okunan instruction sistem desaynı neticesiyle ikinci memoryden başlıyor.
-2 - instructon codes
+
+READ THIS FOR THE TEST CASES:
+
+1 - ilk okunan instruction sistem dizaynı neticesiyle ikinci memoryden başlıyor.
+2 - instruction codes
 lw - 110001
 sw - 110101
 beq - 001000

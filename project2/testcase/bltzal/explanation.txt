@@ -16,6 +16,7 @@ resultingRegister =
 25 - x0000000c
 memory
 0 - 0
-1 - xFFFFFFFF
-2 - xFFFFFFFF
-3 - xFFFFFFFF
+1 - 0
+2 - 0
+3 - 0
+

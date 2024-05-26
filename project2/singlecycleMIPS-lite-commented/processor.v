@@ -62,7 +62,6 @@ wire zout,	//Zero output of ALU
 	alu32 alu1(alu_result, readdata1, out2, zout, vout, nout, gout);
 	// Status register to capture ALU flags
 	status_register sr1(clk, vout, zout, nout, v_flag, z_flag, n_flag);
-    
 	
 integer i;
 
@@ -88,16 +87,15 @@ integer i;
 
 // Register file connections
     	reg [31:0] registerfile[0:31];
-    	assign readdata1 = registerfile[inst25_21]; // Read register 1
     	assign readdata2 = registerfile[inst20_16]; // Read register 2
+    
 
 //Data Memory Read (sum stores adress)
 	assign dpack={datmem[alu_result[5:0]],datmem[alu_result[5:0]+1],datmem[alu_result[5:0]+2],datmem[alu_result[5:0]+3]};
 
 //Multiplexers
 	//1st mux (with RegDst control)
-	mult2_to_1_5  mult1(out1, instruc[20:16], instruc[15:11], regdest);	//mux 11 comes after this
-	
+	mult2_to_1_5  mult1(out1, instruc[20:16], instruc[15:11], regdest);	// mult 11 added after this	
 	//2nd mux (with ALUSrc control, MODIFIED WITH new ZEXTAD)
 	mult2_to_1_32 mult2(out2, readdata2, ori ? zextad : extad, alusrc);
 	

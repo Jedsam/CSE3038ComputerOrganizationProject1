@@ -13,7 +13,7 @@ resultingRegister =
 5 - 0
 6 - 0
 7 - 0
-25 - x00000008
+25 - x0000000c
 memory
 0 - 0
 1 - xFFFFFFFF

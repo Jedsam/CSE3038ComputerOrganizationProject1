@@ -16,7 +16,7 @@ assign jspal = (in == 6'b010011);  // as opcode is 19
 assign baln = (in == 6'b011011);  // as opcode is 27
 
 assign regdest = rformat;
-assign alusrc = lw | sw | ori | bltzal;
+assign alusrc = lw | sw | ori | bltzal | jspal;
 assign memtoreg = lw;
 //by having "link address" in baln and bltzal, we have regwrite:  
 assign regwrite = rformat | lw | ori | baln | bltzal;
